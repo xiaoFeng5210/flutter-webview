@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../settings/settings_view.dart';
@@ -49,6 +51,7 @@ class SampleItemListView extends StatelessWidget {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
+              print('进入webview');
               // 进入webview
               Navigator.restorablePushNamed(context, '/webview');
             },
