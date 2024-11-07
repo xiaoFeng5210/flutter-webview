@@ -3,6 +3,35 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+const htmlString = '''
+<!DOCTYPE html>
+<head>
+<title>webview demo | IAM17</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, 
+  maximum-scale=1.0, user-scalable=no,viewport-fit=cover" />
+<style>
+*{
+  margin:0;
+  padding:0;
+}
+body{
+   background:#BBDFFC;  
+   display:flex;
+   justify-content:center;
+   align-items:center;
+   height:100px;
+   color:#C45F84;
+   font-size:20px;
+}
+</style>
+</head>
+<html>
+<body>
+<div >大家好，我是 17</div>
+</body>
+</html>
+''';
+
 class WebViewExample extends StatefulWidget {
   const WebViewExample({super.key});
 
@@ -15,48 +44,18 @@ class _WebViewExampleState extends State<WebViewExample> {
 
   @override
   void initState() {
-    super.initState();
-
-    // 添加这段代码来设置平台实现
-    if (WebViewPlatform.instance == null) {
-      if (identical(0, 0.0)) {
-        WebViewPlatform.instance = WebKitWebViewPlatform();
-      } else {
-        WebViewPlatform.instance = AndroidWebViewPlatform();
-      }
-    }
-
-    // 添加这段平台初始化代码
-    late final PlatformWebViewControllerCreationParams params;
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
-      );
-    } else {
-      params = const PlatformWebViewControllerCreationParams();
-    }
-
-    controller = WebViewController.fromPlatformCreationParams(params)
+    controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageStarted: (String url) {
-          print('onPageStarted: $url');
-        },
-        onPageFinished: (String url) {
-          print('onPageFinished: $url');
-        },
-        onWebResourceError: (WebResourceError error) {
-          print('onWebResourceError: ${error.description}');
-        },
-      ))
-      ..loadRequest(Uri.parse('http://localhost:5173/'));
+      ..loadHtmlString(htmlString);
+
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: WebViewWidget(controller: controller),
+      // body: Text('WebViewExample'),
     );
   }
 }
