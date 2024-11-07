@@ -8,7 +8,29 @@ import 'sample_item_details_view.dart';
 class SampleItemListView extends StatelessWidget {
   const SampleItemListView({
     super.key,
-    this.items = const [SampleItem(1), SampleItem(2), SampleItem(3)],
+    // 来20个
+    this.items = const [
+      SampleItem(1),
+      SampleItem(2),
+      SampleItem(3),
+      SampleItem(4),
+      SampleItem(5),
+      SampleItem(6),
+      SampleItem(7),
+      SampleItem(8),
+      SampleItem(9),
+      SampleItem(10),
+      SampleItem(11),
+      SampleItem(12),
+      SampleItem(13),
+      SampleItem(14),
+      SampleItem(15),
+      SampleItem(16),
+      SampleItem(17),
+      SampleItem(18),
+      SampleItem(19),
+      SampleItem(20),
+    ],
   });
 
   static const routeName = '/';
@@ -19,8 +41,19 @@ class SampleItemListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('简单示例'),
+        title: const Text('首页'),
         actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              // 进入webview
+              Navigator.restorablePushNamed(context, '/webview');
+            },
+            child: const Text('进入webview'),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
