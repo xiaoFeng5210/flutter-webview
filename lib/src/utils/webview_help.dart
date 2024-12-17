@@ -12,6 +12,9 @@ InAppWebViewSettings getWebViewSettings() {
 
     javaScriptEnabled: true, // 启用javascript支持
     domStorageEnabled: true, // 启用DOM存储
+    // 允许加载本地内容
+    allowFileAccess: true,
+    allowFileAccessFromFileURLs: true,
     allowUniversalAccessFromFileURLs: true, // 允许通用的跨域访问
 
     // 缩放相关设置

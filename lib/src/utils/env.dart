@@ -7,7 +7,7 @@ const Environment currentEnv =
     env == 'dev' ? Environment.dev : Environment.prod;
 
 const String devUrl = 'http://192.168.4.31:3000/';
-const String prodUrl = 'http://192.168.2.103';
+const String prodUrl = 'http://192.168.4.31:3000/';
 
 String getBaseUrl() {
   if (currentEnv == Environment.dev) {
