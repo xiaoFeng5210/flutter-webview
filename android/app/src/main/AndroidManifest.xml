@@ -6,6 +6,7 @@
         android:label="flutter_webview"
         android:usesCleartextTraffic="true"
         android:name="${applicationName}"
+        android:noHistory="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:label="煮面应用"

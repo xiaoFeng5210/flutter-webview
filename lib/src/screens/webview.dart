@@ -20,11 +20,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Timer(const Duration(seconds: 10), () {
-    //   webViewController?.evaluateJavascript(
-    //       source: 'window.alert("Hello, World!");');
-    // });
   }
 
   @override
@@ -36,26 +31,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 隐藏标题栏
-      // appBar: AppBar(
-      //   title: const Text('WebView 示例'),
-      // ),
       body: InAppWebView(
-        // 初始化时加载的URL
         initialUrlRequest: URLRequest(
           url: WebUri(getBaseUrl()),
         ),
-        // 添加 initialSettings 配置
         initialSettings: getWebViewSettings(),
-        // WebView 控制器初始化回调
         onWebViewCreated: (controller) async {
           webViewController = controller;
         },
-        // 页面开始加载回调
         onLoadStart: (controller, url) {
           print('开始加载: $url');
         },
-        // 页面加载完成回调
         onLoadStop: (controller, url) async {
           print('加载完成: $url');
           await getBrowserInfo(controller: controller);

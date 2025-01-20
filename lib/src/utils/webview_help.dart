@@ -3,7 +3,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 InAppWebViewSettings getWebViewSettings() {
   return InAppWebViewSettings(
     useShouldOverrideUrlLoading: true,
-    mediaPlaybackRequiresUserGesture: false,
+    mediaPlaybackRequiresUserGesture: false, // 允许媒体自动播放
 
     // Android 特定设置
     useHybridComposition: true,
@@ -21,11 +21,10 @@ InAppWebViewSettings getWebViewSettings() {
     supportZoom: false, // 支持缩放功能
     builtInZoomControls: false, // 启用内置缩放控件
     displayZoomControls: false, // 不显示缩放按钮
-    initialScale: 90, // 初始缩放比例 100%
-
+    initialScale: 100, // 初始缩放比例 100%
     // 视图相关设置
     // useWideViewPort: true, // 使用宽视图
-    // loadWithOverviewMode: true, // 以概览模式加载
+    loadWithOverviewMode: true, // 自动适应屏幕
   );
 }
 

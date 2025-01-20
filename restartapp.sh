@@ -1,8 +1,3 @@
-flutter build apk --release
-
-# 2. 安装到设备
-adb install -r build/app/outputs/flutter-apk/app-release.apk
-
 # 先强制停止应用
 adb shell am force-stop com.example.flutter_webview
 
