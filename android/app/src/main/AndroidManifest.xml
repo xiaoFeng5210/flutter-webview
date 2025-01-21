@@ -7,7 +7,7 @@
         android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:noHistory="true"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/lebai_logo">
         <activity
             android:label="煮面应用"
             android:name=".MainActivity"

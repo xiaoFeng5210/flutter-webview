@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_webview/src/utils/env.dart';
 import 'package:flutter_webview/src/utils/webview_help.dart';
@@ -38,6 +39,32 @@ class _WebViewScreenState extends State<WebViewScreen> {
         initialSettings: getWebViewSettings(),
         onWebViewCreated: (controller) async {
           webViewController = controller;
+
+          // 添加 JavaScript 处理器
+          controller.addJavaScriptHandler(
+            handlerName: 'exitFlutterApp', // 这个名字要记住，网页端会用到
+            callback: (args) {
+              // 显示退出确认对话框
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('退出确认 Confirm Exit'),
+                  content: const Text(
+                      '确定要退出应用吗 Are you sure you want to exit the app?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消 Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => exit(0), // 退出应用
+                      child: const Text('确定 Confirm'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
         },
         onLoadStart: (controller, url) {
           print('开始加载: $url');
