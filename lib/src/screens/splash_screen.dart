@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'webview.dart';
-import 'package:flutter/services.dart';
 import 'dart:io';
 
 class SplashScreen extends StatefulWidget {
@@ -25,12 +24,6 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _startPolling();
-    // Timer(const Duration(seconds: 5), () {
-    //   Navigator.pushReplacement(
-    //     context,
-    //     MaterialPageRoute(builder: (context) => const WebViewScreen()),
-    //   );
-    // });
   }
 
   void _startPolling() {
