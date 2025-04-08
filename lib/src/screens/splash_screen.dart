@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'webview.dart';
 import 'dart:io';
+import '../utils/env.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,7 +24,17 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _startPolling();
+    if (currentEnv == Environment.dev) {
+      // 3秒后跳转到webview
+      Future.delayed(const Duration(seconds: 3), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const WebViewScreen()),
+        );
+      });
+    } else {
+      _startPolling();
+    }
   }
 
   void _startPolling() {

@@ -1,4 +1,5 @@
-flutter build apk --release
+# 生产环境构建apk
+flutter build apk --release --dart-define=ENV=prod
 
 # 2. 安装到设备
 adb install -r build/app/outputs/flutter-apk/app-release.apk
