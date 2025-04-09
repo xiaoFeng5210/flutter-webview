@@ -10,7 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.immersive,
+      SystemUiMode.immersiveSticky, // 沉浸式模式
       // SystemUiMode.manual,
       // overlays: [SystemUiOverlay.bottom],
     );
