@@ -73,6 +73,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
           print('加载完成: $url');
           await getBrowserInfo(controller: controller);
         },
+        onLoadResource: (controller, url) {
+          print('加载资源: $url');
+        },
       ),
     );
   }

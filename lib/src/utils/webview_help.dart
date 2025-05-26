@@ -17,6 +17,25 @@ InAppWebViewSettings getWebViewSettings() {
     allowFileAccessFromFileURLs: true,
     allowUniversalAccessFromFileURLs: true, // 允许通用的跨域访问
 
+    // 启用实验性web平台功能
+    javaScriptCanOpenWindowsAutomatically: true,
+    // 允许媒体
+    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+    // 关键新增：网络和内存优化
+    cacheMode: CacheMode.LOAD_DEFAULT,
+    databaseEnabled: true,
+    loadsImagesAutomatically: true,
+    blockNetworkImage: false,
+    blockNetworkLoads: false,
+    thirdPartyCookiesEnabled: true,
+    allowContentAccess: true,
+    // WebRTC 和媒体权限
+    allowsAirPlayForMediaPlayback: true,
+
+    hardwareAcceleration: true,
+    userAgent:
+        "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36",
+
     // 缩放相关设置
     supportZoom: false, // 支持缩放功能
     builtInZoomControls: false, // 启用内置缩放控件

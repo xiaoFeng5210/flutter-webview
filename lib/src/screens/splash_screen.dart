@@ -24,17 +24,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    if (currentEnv == Environment.dev) {
-      // 3秒后跳转到webview
-      Future.delayed(const Duration(seconds: 3), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const WebViewScreen()),
-        );
-      });
-    } else {
-      _startPolling();
-    }
+    // 3秒后跳转到webview
+    Future.delayed(const Duration(seconds: 5), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const WebViewScreen()),
+      );
+    });
   }
 
   void _startPolling() {

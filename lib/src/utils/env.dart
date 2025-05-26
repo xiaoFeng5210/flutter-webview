@@ -9,8 +9,8 @@ const String prodUrl = 'http://192.168.22.103:8092/';
 
 String getBaseUrl() {
   if (currentEnv == Environment.dev) {
-    return devUrl;
+    return "https://man.lebai.ltd/static/MiniLive_new.html";
   } else {
-    return prodUrl;
+    return "https://man.lebai.ltd/static/MiniLive_new.html";
   }
 }
