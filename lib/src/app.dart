@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/splash_screen.dart';
 
 /// The Widget that configures your application.
@@ -26,34 +25,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(),
       darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
-      // home: const SplashScreen(),
 
-      home: const Stack(
-        children: [
-          SplashScreen(),
-          // 左上角滑动区域
-          // Positioned(
-          //   left: 0,
-          //   top: 0,
-          //   child: GestureDetector(
-          //     onPanUpdate: (details) {
-          //       // 检测向右滑动
-          //       if (details.delta.dx > 10) {
-          //         // 可以调整这个值来改变灵敏度
-          //         _showExitDialog(context);
-          //       }
-          //     },
-          //     child: Container(
-          //       height: 100, // 可以调整触摸区域大小
-          //       width: 100,
-          //       color: Colors.transparent,
-          //       // 调试时可以取消注释下面这行来查看触摸区域
-          //       // color: Colors.red.withOpacity(0.1),
-          //     ),
-          //   ),
-          // ),
-        ],
-      ),
+      // home: const SplashScreen(),
+      home: const Stack(children: [SplashScreen()]),
     );
   }
 

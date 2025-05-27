@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ElevatedButton(
               onPressed: () => exit(0),
               child: const Text('退出应用 Exit App'),
-            )
+            ),
           ],
         ),
       ),

@@ -4,7 +4,6 @@ InAppWebViewSettings getWebViewSettings() {
   return InAppWebViewSettings(
     useShouldOverrideUrlLoading: true,
     mediaPlaybackRequiresUserGesture: false, // 允许媒体自动播放
-
     // Android 特定设置
     useHybridComposition: true,
     // iOS 特定设置
@@ -16,7 +15,6 @@ InAppWebViewSettings getWebViewSettings() {
     allowFileAccess: true,
     allowFileAccessFromFileURLs: true,
     allowUniversalAccessFromFileURLs: true, // 允许通用的跨域访问
-
     // 缩放相关设置
     supportZoom: false, // 支持缩放功能
     builtInZoomControls: false, // 启用内置缩放控件
@@ -37,8 +35,9 @@ String? _getChromeVersion(String userAgent) {
   return match?.group(0);
 }
 
-Future<void> getBrowserInfo(
-    {required InAppWebViewController? controller}) async {
+Future<void> getBrowserInfo({
+  required InAppWebViewController? controller,
+}) async {
   if (controller != null) {
     final userAgent = await controller.evaluateJavascript(
       source: 'navigator.userAgent',
