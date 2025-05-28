@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAppStatus() async {
     try {
-      final res = await http.get(Uri.parse('http://192.168.22.103:8092'));
+      final res = await http.get(Uri.parse('http://www.baidu.com'));
       if (res.statusCode == 200) {
         _pollingTimer?.cancel();
         Navigator.pushReplacement(

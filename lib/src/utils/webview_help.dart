@@ -23,6 +23,9 @@ InAppWebViewSettings getWebViewSettings() {
     // 视图相关设置
     // useWideViewPort: true, // 使用宽视图
     loadWithOverviewMode: true, // 自动适应屏幕
+
+    userAgent:
+        "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36",
   );
 }
 
@@ -43,6 +46,7 @@ Future<void> getBrowserInfo({
       source: 'navigator.userAgent',
     );
     final chromeVersion = _getChromeVersion(userAgent);
+    print('🔍 ==================== 浏览器内核详细信息 ====================');
     print('chromeVersion: $chromeVersion');
   }
 }
