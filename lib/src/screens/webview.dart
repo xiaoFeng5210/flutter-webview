@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:async';
 import 'dart:io';
@@ -62,6 +63,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   ],
                 ),
               );
+            },
+          );
+
+          controller.addJavaScriptHandler(
+            handlerName: 'setImmersiveMode',
+            callback: (args) async {
+              SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
             },
           );
         },
