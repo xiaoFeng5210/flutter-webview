@@ -26,12 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     if (currentEnv == Environment.dev) {
       // 3秒后跳转到webview
-      Future.delayed(const Duration(seconds: 3), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const WebViewScreen()),
-        );
-      });
+      _startPolling();
     } else {
       _startPolling();
     }
@@ -39,23 +34,31 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      _checkAppStatus();
-    });
+    _checkAppStatus();
   }
 
   Future<void> _checkAppStatus() async {
     try {
-      final res = await http.get(Uri.parse('http://192.168.22.103:8092'));
+      final res = await http.get(Uri.parse('http://192.168.22.103:8092')).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         _pollingTimer?.cancel();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const WebViewScreen()),
-        );
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const WebViewScreen()),
+          );
+        }
+        return;
       }
     } catch (e) {
-      print('Error checking app status: $e');
+      print('===========Error checking app status: $e===========');
+    }
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (mounted) {
+      _checkAppStatus();
     }
   }
 
@@ -73,13 +76,13 @@ class _SplashScreenState extends State<SplashScreen> {
             const CircularProgressIndicator(),
             const SizedBox(height: 24),
             const Text(
-              '应用加载中 Application loading ...',
-              style: TextStyle(fontSize: 18),
+              '网络连接中 Network connection ...',
+              style: TextStyle(fontSize: 36),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => exit(0),
-              child: const Text('退出应用 Exit App'),
+              child: const Text('退出 Exit', style: TextStyle(fontSize: 36),),
             ),
           ],
         ),
