@@ -12,10 +12,10 @@ class UrlConfig {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getString(_key);
     if (value == null || value.isEmpty) {
-      webviewUrl = _defaultUrl;
+      webviewUrl = '$_defaultUrl/';
       return _defaultUrl;
     } else {
-      webviewUrl = value;
+      webviewUrl = '$value/';
       return value;
     }
   }
@@ -25,8 +25,11 @@ class UrlConfig {
     final prefs = await SharedPreferences.getInstance();
     bool ok = await prefs.setString(_key, url);
     if (ok) {
-      webviewUrl = url;
-      return true;
+      if (url.contains("8092")) {
+        webviewUrl = '$url/';
+        return true;
+      }
+      return false;
     } else {
       return false;
     }

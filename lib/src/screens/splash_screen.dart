@@ -15,7 +15,6 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   Timer? _pollingTimer;
   String _currentUrl = '';
-
   @override
   void dispose() {
     _pollingTimer?.cancel();
@@ -127,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('URL 保存失败', style: TextStyle(fontSize: 26)),
+                                  content: Text('URL 保存失败, 请检查URL是否正确, 是否包含端口8092', style: TextStyle(fontSize: 26)),
                                   backgroundColor: Colors.red,
                                   duration: Duration(seconds: 2),
                                 ),
