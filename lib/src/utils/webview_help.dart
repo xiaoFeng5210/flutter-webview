@@ -30,7 +30,6 @@ String? _getChromeVersion(String userAgent) {
   // 使用正则表达式匹配 Chrome/版本号
   final RegExp regExp = RegExp(r'Chrome/([0-9]+)');
   final Match? match = regExp.firstMatch(userAgent);
-
   // 如果匹配到了，返回版本号，否则返回 null
   return match?.group(0);
 }

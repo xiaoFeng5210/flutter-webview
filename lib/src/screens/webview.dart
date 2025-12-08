@@ -4,8 +4,9 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter_webview/src/utils/env.dart';
+// import 'package:flutter_webview/src/utils/env.dart';
 import 'package:flutter_webview/src/utils/webview_help.dart';
+import 'package:flutter_webview/src/utils/url_config.dart';
 
 class WebViewScreen extends StatefulWidget {
   const WebViewScreen({super.key});
@@ -34,7 +35,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: InAppWebView(
-        initialUrlRequest: URLRequest(url: WebUri(getBaseUrl())),
+        initialUrlRequest: URLRequest(url: WebUri(UrlConfig.webviewUrl)),
         initialSettings: getWebViewSettings(),
         onWebViewCreated: (controller) async {
           webViewController = controller;

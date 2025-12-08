@@ -1,3 +1,5 @@
+import 'url_config.dart';
+
 enum Environment { dev, prod }
 
 const env = String.fromEnvironment('ENV', defaultValue: 'dev');
@@ -5,14 +7,8 @@ const Environment currentEnv = env == 'dev'
     ? Environment.dev
     : Environment.prod;
 
-const String devUrl = 'http://192.168.4.26:3000/';
-const String prodUrl = 'http://192.168.22.103:8092/';
-// const String prodUrl = 'http://10.20.17.1:8092/';
-
-String getBaseUrl() {
-  if (currentEnv == Environment.dev) {
-    return devUrl;
-  } else {
-    return prodUrl;
-  }
+Future<String> getBaseUrl() async {
+  final url = await UrlConfig.getUrl();
+  // 确保 URL 尾部有斜杠
+  return url.endsWith('/') ? url : '$url/';
 }
