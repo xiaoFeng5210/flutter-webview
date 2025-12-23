@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'webview.dart';
 import 'dart:io';
 import '../utils/url_config.dart';
+import 'package:restart_app/restart_app.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -58,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
     } catch (e) {
-      print('===========Error checking app status: $e===========');
+      debugPrint('Error checking app status: $e');
     }
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
@@ -167,6 +168,16 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
+  void _restartApp() {
+    if (!mounted) return;
+    debugPrint('准备重启应用 Restart App');
+    try {
+      Restart.restartApp();
+    } catch (e) {
+      debugPrint('Error restarting app: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,15 +236,32 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ),
                   const SizedBox(height: 48),
-                  ElevatedButton(
-                    onPressed: () => exit(0),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      side: const BorderSide(color: Colors.red, width: 2),
-                    ),
-                    child: const Text('退出 Exit', style: TextStyle(fontSize: 24)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _restartApp(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          side: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        child: const Text('重启 Restart', style: TextStyle(fontSize: 24)),
+                      ),
+                      const SizedBox(width: 50),
+                      ElevatedButton(
+                        onPressed: () => exit(0),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          side: const BorderSide(color: Colors.red, width: 2),
+                        ),
+                        child: const Text('退出 Exit', style: TextStyle(fontSize: 24)),
+                      ),
+                      
+                    ],
                   ),
                 ],
               ),

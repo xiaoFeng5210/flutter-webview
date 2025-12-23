@@ -23,12 +23,32 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   void initState() {
     super.initState();
+    _startBackgroundProgram();
   }
 
   @override
   void dispose() {
     super.dispose();
     pollingTimer?.cancel();
+  }
+
+  Future<void> _startBackgroundProgram() async {
+    if (!mounted) return;
+    final now = DateTime.now();
+    final hour = now.hour;
+    await Future.delayed(const Duration(minutes: 30));
+    try {
+      // 半夜两点退出应用
+      if (hour == 2) {
+        exit(0);
+      }
+    } catch (e) {
+      debugPrint('Error starting background program: $e');
+    }
+
+    if (mounted) {
+      _startBackgroundProgram();
+    }
   }
 
   @override
