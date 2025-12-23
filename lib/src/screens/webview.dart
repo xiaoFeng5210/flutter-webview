@@ -20,6 +20,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
   InAppWebViewController? webViewController;
   Timer? pollingTimer;
 
+  Timer? _backgroundTimer;
+
   @override
   void initState() {
     super.initState();
@@ -29,25 +31,32 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   void dispose() {
     super.dispose();
+    _backgroundTimer?.cancel();
     pollingTimer?.cancel();
   }
 
   Future<void> _startBackgroundProgram() async {
-    if (!mounted) return;
+    _backgroundTimer?.cancel();
+    _backgroundTimer = Timer.periodic(const Duration(minutes: 30), (timer) {
+      _checkTimeAndClearApp();
+    });
+  }
+
+  void _checkTimeAndClearApp() {
+    if (!mounted) {
+      _backgroundTimer?.cancel();
+      return;
+    }
     final now = DateTime.now();
     final hour = now.hour;
-    await Future.delayed(const Duration(minutes: 30));
     try {
+      debugPrint('当前小时: $hour');
       // 半夜两点退出应用
       if (hour == 2) {
         exit(0);
       }
     } catch (e) {
       debugPrint('Error starting background program: $e');
-    }
-
-    if (mounted) {
-      _startBackgroundProgram();
     }
   }
 
