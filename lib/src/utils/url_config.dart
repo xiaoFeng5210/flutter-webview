@@ -2,7 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class UrlConfig {
   static const String _key = 'base_url';
-  static const String _defaultUrl = 'http://192.168.22.103:8092';
+  // static const String _defaultUrl = 'http://192.168.22.103:8092';
+  static const String _defaultUrl = "https://shop.lebai.ltd";
 
   // 全局变量，用于存储当前的URL
   static String webviewUrl = '$_defaultUrl/';

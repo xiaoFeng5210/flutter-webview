@@ -9,6 +9,6 @@ const Environment currentEnv = env == 'dev'
 
 Future<String> getBaseUrl() async {
   final url = await UrlConfig.getUrl();
-  // 确保 URL 尾部有斜杠
+  // 确保 URL 尾部有斜杠  localhost:8092
   return url.endsWith('/') ? url : '$url/';
 }
