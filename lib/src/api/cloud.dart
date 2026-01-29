@@ -153,6 +153,41 @@ class DeviceListParams {
   }
 }
 
+/// 获取 FRPC 机器信息的请求参数
+class FrpcMachineRequest {
+  final String deviceid;
+
+  FrpcMachineRequest({
+    required this.deviceid,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'deviceid': deviceid,
+    };
+  }
+}
+
+/// FRPC 机器信息响应模型
+class FrpcMachineResponse {
+  final int code;
+  final String data; // webview url 路径
+
+  FrpcMachineResponse({
+    required this.code,
+    required this.data,
+  });
+
+  factory FrpcMachineResponse.fromJson(Map<String, dynamic> json) {
+    return FrpcMachineResponse(
+      code: json['code'] as int? ?? -1,
+      data: json['data'] as String? ?? '',
+    );
+  }
+
+  bool get isSuccess => code == 200 || code == 0;
+}
+
 /// 云服务 API 客户端
 class CloudApi {
   static const String baseUrl = 'https://shop.lebai.ltd/api';
@@ -197,6 +232,7 @@ class CloudApi {
     if (_cookieJar == null) return;
     
     final setCookieHeaders = response.headers['set-cookie'];
+    print('Set-Cookie headers: $setCookieHeaders');
     if (setCookieHeaders != null) {
       final cookies = _parseSetCookieHeaders(setCookieHeaders);
       await _cookieJar!.saveFromResponse(uri, cookies);
@@ -271,13 +307,9 @@ class CloudApi {
       final uri = Uri.parse('$baseUrl/auth/signin');
       
       // 获取已有的 Cookie
-      final cookieString = await _getCookieString(uri);
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      if (cookieString.isNotEmpty) {
-        headers['Cookie'] = cookieString;
-      }
       
       final body = json.encode(request.toJson());
 
@@ -313,39 +345,81 @@ class CloudApi {
   /// 抛出异常如果请求失败或超时
   Future<DeviceListResponse> getDeviceList(DeviceListParams params) async {
     try {
-      final uri = Uri.parse('$baseUrl/device/list').replace(
-        queryParameters: params.toJson().map(
-          (key, value) => MapEntry(key, value.toString()),
-        ),
-      );
+      final uri = Uri.parse('$baseUrl/device/list');
 
       // 获取已有的 Cookie
       final cookieString = await _getCookieString(uri);
-      final headers = <String, String>{};
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
       if (cookieString.isNotEmpty) {
         headers['Cookie'] = cookieString;
       }
 
+      final body = json.encode(params.toJson());
+
       final response = await _client
-          .get(uri, headers: headers)
+          .post(uri, headers: headers, body: body)
           .timeout(timeout, onTimeout: () {
         throw Exception('请求超时');
       });
 
-      // 保存响应中的 Cookie（如果有新的）
+      // 保存响应中的 Cookie
       await _saveCookies(uri, response);
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         return DeviceListResponse.fromJson(jsonData);
       } else {
-        throw Exception('请求失败: ${response.statusCode}');
+        throw Exception('请求失败: ${response.body}');
       }
     } catch (e) {
       if (e is Exception) {
         rethrow;
       }
       throw Exception('获取设备列表失败: $e');
+    }
+  }
+
+  /// 获取 FRPC 机器信息（WebView URL）
+  /// 
+  /// [request] 请求参数，包含设备ID
+  /// 
+  /// 返回 [FrpcMachineResponse] FRPC 机器信息响应，包含 webview url 路径
+  /// 
+  /// 抛出异常如果请求失败或超时
+  Future<FrpcMachineResponse> getFrpcMachine(FrpcMachineRequest request) async {
+    try {
+      final uri = Uri.parse('$baseUrl/device/frpc-machine');
+
+      // 获取已有的 Cookie
+      final cookieString = await _getCookieString(uri);
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (cookieString.isNotEmpty) {
+        headers['Cookie'] = cookieString;
+      }
+
+      final body = json.encode(request.toJson());
+
+      final response = await _client
+          .post(uri, headers: headers, body: body)
+          .timeout(timeout, onTimeout: () {
+        throw Exception('请求超时');
+      });
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        return FrpcMachineResponse.fromJson(jsonData);
+      } else {
+        throw Exception('请求失败: ${response.body}');
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('获取 FRPC 机器信息失败: $e');
     }
   }
 
