@@ -364,9 +364,6 @@ class CloudApi {
         throw Exception('请求超时');
       });
 
-      // 保存响应中的 Cookie
-      await _saveCookies(uri, response);
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         return DeviceListResponse.fromJson(jsonData);

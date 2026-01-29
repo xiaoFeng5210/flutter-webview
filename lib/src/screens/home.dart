@@ -261,11 +261,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         style: TextStyle(fontSize: 20),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 24),
                     ElevatedButton(
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
-                        
                         try {
                           final response = await _cloudApi.getFrpcMachine(FrpcMachineRequest(deviceid: device.id));
                           if (response.code == 0) {
@@ -286,8 +285,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           );
                         }
-
-
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
@@ -321,7 +318,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text("远程访问应用App工具🔧",
+        title: const Text("云迹煮面远程访问应用App工具🔧",
         style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.blue)),
       ),
       body: SafeArea(

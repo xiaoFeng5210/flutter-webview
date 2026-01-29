@@ -17,8 +17,8 @@ class HomeNotifier extends Notifier<Home> {
   @override
   Home build() {
     return Home(
-      username: 'zhangqingfeng@yjzm.com',
-      password: 'Ff85859852',
+      username: '',
+      password: '',
     );
   }
 }
