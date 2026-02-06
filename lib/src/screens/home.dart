@@ -21,10 +21,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _total = 0; // 总记录数
   static const int _pageSize = 20; // 每页大小
 
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _fetchDeviceList();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    usernameController.dispose();
+    passwordController.dispose();
   }
 
   /// 分段打印长字符串，避免 debugPrint 截断
@@ -93,8 +103,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 
   Future<void> _showLoginDialog() async {
-    final TextEditingController usernameController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
+    
 
     final homeNotifier = ref.read(homeProvider.notifier);
     usernameController.text = homeNotifier.state.username;
@@ -194,7 +203,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 setState(() {
                                   isLoading = false;
                                 });
-                              }
+                              }   isLoading = true;
                             },
                             child: const Text('登录', style: TextStyle(fontSize: 24)),
                           ),
@@ -209,12 +218,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
     );
   }
-
-  
-
-  
-
-  
   /// 显示进入App的确认对话框
   Future<void> _showConfirmDialog(Device device) async {
     await showDialog(
