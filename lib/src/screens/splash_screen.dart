@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'webview.dart';
@@ -24,6 +25,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     _startPolling();
   }
 
@@ -72,9 +77,10 @@ class _SplashScreenState extends State<SplashScreen> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          child: Container(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Container(
             padding: const EdgeInsets.all(32),
-            width: MediaQuery.of(context).size.width * 0.85,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,6 +151,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ],
             ),
           ),
+          ),
         );
       },
     );
@@ -174,7 +181,7 @@ class _SplashScreenState extends State<SplashScreen> {
         children: [
           // 顶部按钮区域
           Padding(
-            padding: const EdgeInsets.only(top: 40, bottom: 20),
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -209,12 +216,12 @@ class _SplashScreenState extends State<SplashScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const CircularProgressIndicator(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   const Text(
                     '网络连接中 Network connection ...',
                     style: TextStyle(fontSize: 36),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   if (_currentUrl.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -224,7 +231,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => exit(0),
                     style: ElevatedButton.styleFrom(
