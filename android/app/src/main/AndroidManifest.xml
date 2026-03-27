@@ -9,7 +9,7 @@
         android:usesCleartextTraffic="true"
         >
         <activity
-            android:label="煮面应用"
+            android:label="Fried Robot App"
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
