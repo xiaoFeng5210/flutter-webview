@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
+import 'package:network_info/network_info.dart';
 
 /// The Widget that configures your application.
 class MyApp extends StatelessWidget {
