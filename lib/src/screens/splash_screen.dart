@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:wifi_scan/wifi_scan.dart';
 
 import '../utils/url_config.dart';
+import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
 const String _targetWifiSsidKeyword = 'lebai';
@@ -22,6 +23,8 @@ class _SplashScreenState extends State<SplashScreen> {
   String _currentUrl = '';
   String _startupMessage = '正在准备启动流程...';
   String? _matchedWifiInfo;
+  String? _wifiConnectionInfo;
+  WiFiAccessPoint? _matchedWifiPoint;
   int _lastWifiScanCount = 0;
 
   @override
@@ -45,7 +48,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _runStartupFlow() async {
     await _loadCurrentUrl();
-    // FIXME: 等待目标 Wi-Fi 准备好
     final isWifiReady = await _waitForTargetWifi();
     if (!mounted || !isWifiReady) return;
     await _checkAppStatus();
@@ -71,9 +73,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
         final scanStarted = await WiFiScan.instance.startScan();
         if (mounted) {
-          _setStartupMessage(
-            scanStarted ? 'Wi-Fi 寻找中...' : 'Wi-Fi 触发失败，读取最近扫描结果...',
-          );
+          _setStartupMessage(scanStarted ? 'Wi-Fi 寻找中...' : '请打开PAD设备WIFI');
         }
         await Future.delayed(_wifiScanResultDelay);
 
@@ -103,10 +103,14 @@ class _SplashScreenState extends State<SplashScreen> {
           if (mounted) {
             setState(() {
               _matchedWifiInfo = '$ssid (${matchedAccessPoint.level} dBm)';
-              _startupMessage = '已找到目标 Wi-Fi，正在检测 Web 服务...';
+              _startupMessage = '已找到目标 Wi-Fi，正在连接...';
             });
           }
-          return true;
+          _matchedWifiPoint = matchedAccessPoint;
+          final connected = await _connectMatchedWifi();
+          if (connected) return true;
+          await Future.delayed(_wifiScanInterval);
+          continue;
         }
 
         _setStartupMessage(
@@ -123,9 +127,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   WiFiAccessPoint? _findTargetAccessPoint(List<WiFiAccessPoint> accessPoints) {
-    accessPoints.forEach((wifi) {
-      print('===========wifi名称: ${wifi.ssid}===========');
-    });
     final keyword = _targetWifiSsidKeyword.trim().toLowerCase();
     final matches = accessPoints.where((accessPoint) {
       final ssid = accessPoint.ssid.trim();
@@ -135,6 +136,27 @@ class _SplashScreenState extends State<SplashScreen> {
     }).toList()..sort((a, b) => b.level.compareTo(a.level));
 
     return matches.isEmpty ? null : matches.first;
+  }
+
+  Future<bool> _connectMatchedWifi() async {
+    final accessPoint = _matchedWifiPoint;
+    if (accessPoint == null) return false;
+
+    final result = await connectToScannedAccessPoint(
+      accessPoint,
+      options: targetWifiConnectionOptions,
+    );
+
+    if (!mounted) return false;
+    setState(() {
+      _wifiConnectionInfo = result.currentSsid == null
+          ? result.message
+          : '${result.message}: ${result.currentSsid}';
+      _startupMessage = result.success
+          ? '目标 Wi-Fi 已连接，正在检测 Web 服务...'
+          : '${result.message}，稍后重试...';
+    });
+    return result.success;
   }
 
   String _scanBlockMessage(CanStartScan result) {
@@ -403,6 +425,14 @@ class _SplashScreenState extends State<SplashScreen> {
                     const SizedBox(height: 12),
                     Text(
                       '匹配 Wi-Fi: $_matchedWifiInfo',
+                      style: const TextStyle(fontSize: 22, color: Colors.green),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (_wifiConnectionInfo != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      '连接状态: $_wifiConnectionInfo',
                       style: const TextStyle(fontSize: 22, color: Colors.green),
                       textAlign: TextAlign.center,
                     ),
