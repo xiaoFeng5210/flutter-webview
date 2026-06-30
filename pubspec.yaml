@@ -38,6 +38,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.3
   network_info: ^2.0.0
+  wifi_scan: ^0.4.1+2
 
 dev_dependencies:
   flutter_test:

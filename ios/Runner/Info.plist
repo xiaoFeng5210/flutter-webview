@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>需要定位权限用于扫描附近 Wi-Fi 并识别目标网络。</string>
 </dict>
 </plist>
