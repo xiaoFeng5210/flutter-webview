@@ -9,7 +9,7 @@ import '../utils/url_config.dart';
 import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
-const String _targetWifiSsidKeyword = 'Guest';
+const String _targetWifiSsidKeyword = 'staff';
 const Duration _wifiScanInterval = Duration(seconds: 5);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
 const Duration _wifiScanRetryDelay = Duration(seconds: 10);
@@ -400,27 +400,27 @@ class _SplashScreenState extends State<SplashScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    '${StartupMessages.targetWifiLabel}: $_targetWifiSsidKeyword',
-                    style: const TextStyle(fontSize: 24, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_lastWifiScanCount > 0) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      '${StartupMessages.latestScanLabel}: ${StartupMessages.scanCount(_lastWifiScanCount)}',
-                      style: const TextStyle(fontSize: 22, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                  if (_matchedWifiInfo != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      '${StartupMessages.matchedWifiLabel}: $_matchedWifiInfo',
-                      style: const TextStyle(fontSize: 22, color: Colors.green),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  // Text(
+                  //   '${StartupMessages.targetWifiLabel}: $_targetWifiSsidKeyword',
+                  //   style: const TextStyle(fontSize: 24, color: Colors.grey),
+                  //   textAlign: TextAlign.center,
+                  // ),
+                  // if (_lastWifiScanCount > 0) ...[
+                  //   const SizedBox(height: 12),
+                  //   Text(
+                  //     '${StartupMessages.latestScanLabel}: ${StartupMessages.scanCount(_lastWifiScanCount)}',
+                  //     style: const TextStyle(fontSize: 22, color: Colors.grey),
+                  //     textAlign: TextAlign.center,
+                  //   ),
+                  // ],
+                  // if (_matchedWifiInfo != null) ...[
+                  //   const SizedBox(height: 12),
+                  //   Text(
+                  //     '${StartupMessages.matchedWifiLabel}: $_matchedWifiInfo',
+                  //     style: const TextStyle(fontSize: 22, color: Colors.green),
+                  //     textAlign: TextAlign.center,
+                  //   ),
+                  // ],
                   if (_wifiConnectionInfo != null) ...[
                     const SizedBox(height: 12),
                     Text(
