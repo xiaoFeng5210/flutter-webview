@@ -15,8 +15,7 @@ class StartupMessages {
   static const wifiFindSearching = 'Wi-Fi 查找中...';
   static const wifiFindSuccess = 'Wi-Fi 查找成功，正在连接...';
   static const wifiFindFailed = 'Wi-Fi 查找异常，稍后重试...';
-  static const deviceWifiDisabled = '请先开启设备wifi';
-  static const wifiFindOpenDeviceWifi = '请先打开PAD的Wi-Fi';
+  static const deviceWifiDisabled = '请先开启设备(PAD)的wifi...';
   static const wifiFindUnsupported = '当前平台不支持 Wi-Fi 查找，继续检测 Web 服务...';
   static const wifiResultUnsupported = '当前平台不支持读取 Wi-Fi 结果，继续检测 Web 服务...';
 

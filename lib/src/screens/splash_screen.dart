@@ -11,7 +11,7 @@ import '../utils/wifi_config.dart';
 import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
-const Duration _wifiScanInterval = Duration(seconds: 10);
+const Duration _wifiScanInterval = Duration(seconds: 8);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
 const Duration _wifiScanRetryDelay = Duration(seconds: 3);
 const Color _primaryActionColor = Color(0xFF1F7A55);
@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen> {
             flowId: flowId,
           );
           _showTopErrorSnackBar(StartupMessages.deviceWifiDisabled);
-          await Future.delayed(const Duration(seconds: 3));
+          await Future.delayed(const Duration(seconds: 4));
           continue;
         }
 
@@ -127,9 +127,7 @@ class _SplashScreenState extends State<SplashScreen> {
         final scanStarted = await WiFiScan.instance.startScan();
         if (_isActiveStartupFlow(flowId)) {
           _setStartupMessage(
-            scanStarted
-                ? StartupMessages.wifiFindSearching
-                : StartupMessages.wifiFindOpenDeviceWifi,
+            StartupMessages.wifiFindSearching,
             flowId: flowId,
           );
           if (!scanStarted) {
@@ -253,7 +251,7 @@ class _SplashScreenState extends State<SplashScreen> {
           right: 48,
           bottom: bottomMargin > 0 ? bottomMargin : 0,
         ),
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
