@@ -13,6 +13,11 @@ import 'webview.dart';
 const Duration _wifiScanInterval = Duration(seconds: 5);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
 const Duration _wifiScanRetryDelay = Duration(seconds: 10);
+const Color _primaryActionColor = Color(0xFF1F7A55);
+const Color _secondaryActionColor = Colors.blueAccent;
+const Color _dangerActionColor = Color(0xFFC0392B);
+const Color _mutedTextColor = Color(0xFF667085);
+const Color _lineColor = Color(0xFFE4E7EC);
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,10 +30,8 @@ class _SplashScreenState extends State<SplashScreen> {
   String _currentUrl = '';
   String _targetWifiSsid = WifiConfig.defaultSsid;
   String _startupMessage = StartupMessages.preparing;
-  String? _matchedWifiInfo;
   String? _wifiConnectionInfo;
   WiFiAccessPoint? _matchedWifiPoint;
-  int _lastWifiScanCount = 0;
 
   @override
   void initState() {
@@ -121,17 +124,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
         final accessPoints = await WiFiScan.instance.getScannedResults();
         final matchedAccessPoint = _findTargetAccessPoint(accessPoints);
-        if (mounted) {
-          setState(() {
-            _lastWifiScanCount = accessPoints.length;
-          });
-        }
 
         if (matchedAccessPoint != null) {
-          final ssid = matchedAccessPoint.ssid.trim();
           if (mounted) {
             setState(() {
-              _matchedWifiInfo = '$ssid (${matchedAccessPoint.level} dBm)';
               _startupMessage = StartupMessages.wifiFindSuccess;
             });
           }
@@ -300,7 +296,6 @@ class _SplashScreenState extends State<SplashScreen> {
                           navigator.pop();
                           setState(() {
                             _targetWifiSsid = newSsid;
-                            _matchedWifiInfo = null;
                             _matchedWifiPoint = null;
                             _wifiConnectionInfo = null;
                           });
@@ -352,7 +347,7 @@ class _SplashScreenState extends State<SplashScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '设置 WebView URL',
+                  '设置 Web URL',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 24),
@@ -446,7 +441,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            success ? 'URL 已重置为默认值' : '重置失败',
+            success ? 'Web URL 已重置为默认值' : 'Web URL 重置失败',
             style: const TextStyle(fontSize: 26),
           ),
           backgroundColor: success ? Colors.green : Colors.red,
@@ -456,85 +451,141 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          // 顶部按钮区域
-          Padding(
-            padding: const EdgeInsets.only(top: 40, bottom: 20),
+  ButtonStyle _controlButtonStyle({
+    Color color = _primaryActionColor,
+    double minWidth = 128,
+  }) {
+    return ElevatedButton.styleFrom(
+      elevation: 0,
+      backgroundColor: Colors.white,
+      foregroundColor: color,
+      minimumSize: Size(minWidth, 56),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      side: BorderSide(color: color.withValues(alpha: 0.72), width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+    );
+  }
+
+  Widget _buildConfigRow({
+    required String label,
+    required String value,
+    required List<Widget> actions,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 680;
+        final title = Text(
+          label,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF344054),
+          ),
+        );
+        final valueText = Text(
+          value,
+          maxLines: isCompact ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 22, color: _mutedTextColor),
+        );
+
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: _lineColor)),
+          ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    title,
+                    const SizedBox(height: 6),
+                    valueText,
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: actions,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    SizedBox(width: 128, child: title),
+                    Expanded(child: valueText),
+                    const SizedBox(width: 24),
+                    Wrap(spacing: 12, runSpacing: 12, children: actions),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _buildControlPanel() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth < 680 ? 24.0 : 48.0;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            40,
+            horizontalPadding,
+            12,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1080),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                _buildConfigRow(
+                  label: '目标 Wi-Fi',
+                  value: _targetWifiSsid,
+                  actions: [
                     ElevatedButton(
                       onPressed: _showWifiSettingsDialog,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.blue,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        side: const BorderSide(color: Colors.blue, width: 2),
-                      ),
-                      child: const Text(
-                        '设置目标 Wi-Fi',
-                        style: TextStyle(fontSize: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Text(
-                      '${StartupMessages.targetWifiLabel}: $_targetWifiSsid',
-                      style: const TextStyle(fontSize: 24, color: Colors.grey),
+                      style: _controlButtonStyle(color: _secondaryActionColor),
+                      child: const Text('修改WIFI'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                _buildConfigRow(
+                  label: 'Web URL',
+                  value: _currentUrl.isEmpty ? '未设置' : _currentUrl,
+                  actions: [
                     ElevatedButton(
                       onPressed: _showUrlSettingsDialog,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        side: const BorderSide(color: Colors.green, width: 2),
-                      ),
-                      child: const Text(
-                        '设置 WebView URL',
-                        style: TextStyle(fontSize: 24),
-                      ),
+                      style: _controlButtonStyle(),
+                      child: const Text('修改URL'),
                     ),
-                    const SizedBox(width: 20),
                     ElevatedButton(
                       onPressed: _resetUrl,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        side: const BorderSide(color: Colors.orange, width: 2),
+                      style: _controlButtonStyle(
+                        color: _mutedTextColor,
+                        minWidth: 112,
                       ),
-                      child: const Text(
-                        '重置 URL',
-                        style: TextStyle(fontSize: 24),
-                      ),
+                      child: const Text('重置'),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          _buildControlPanel(),
           // 主要内容区域
           Expanded(
             child: Center(
@@ -554,23 +605,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   //   style: const TextStyle(fontSize: 24, color: Colors.grey),
                   //   textAlign: TextAlign.center,
                   // ),
-                  // if (_lastWifiScanCount > 0) ...[
-                  //   const SizedBox(height: 12),
-                  //   Text(
-                  //     '${StartupMessages.latestScanLabel}: ${StartupMessages.scanCount(_lastWifiScanCount)}',
-                  //     style: const TextStyle(fontSize: 22, color: Colors.grey),
-                  //     textAlign: TextAlign.center,
-                  //   ),
-                  // ],
-                  // if (_matchedWifiInfo != null) ...[
-                  //   const SizedBox(height: 12),
-                  //   Text(
-                  //     '${StartupMessages.matchedWifiLabel}: $_matchedWifiInfo',
-                  //     style: const TextStyle(fontSize: 22, color: Colors.green),
-                  //     textAlign: TextAlign.center,
-                  //   ),
-                  // ],
-                  if (_wifiConnectionInfo != null) ...[
+                  ...[
                     const SizedBox(height: 12),
                     Text(
                       '${StartupMessages.wifiConnectionLabel}: $_wifiConnectionInfo',
@@ -579,34 +614,26 @@ class _SplashScreenState extends State<SplashScreen> {
                     ),
                   ],
                   const SizedBox(height: 24),
-                  if (_currentUrl.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Text(
-                        '${StartupMessages.currentUrlLabel}: $_currentUrl',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          color: Colors.grey,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  const SizedBox(height: 48),
+                  // if (_currentUrl.isNotEmpty)
+                  //   Padding(
+                  //     padding: const EdgeInsets.symmetric(horizontal: 24),
+                  //     child: Text(
+                  //       '${StartupMessages.currentUrlLabel}: $_currentUrl',
+                  //       style: const TextStyle(
+                  //         fontSize: 22,
+                  //         color: Colors.grey,
+                  //       ),
+                  //       textAlign: TextAlign.center,
+                  //     ),
+                  //   ),
+                  // const SizedBox(height: 48),
                   ElevatedButton(
                     onPressed: () => exit(0),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      side: const BorderSide(color: Colors.red, width: 2),
+                    style: _controlButtonStyle(
+                      color: _dangerActionColor,
+                      minWidth: 160,
                     ),
-                    child: const Text(
-                      '退出 Exit',
-                      style: TextStyle(fontSize: 24),
-                    ),
+                    child: const Text('退出'),
                   ),
                 ],
               ),

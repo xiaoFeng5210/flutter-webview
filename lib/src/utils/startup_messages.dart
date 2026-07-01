@@ -38,7 +38,7 @@ class StartupMessages {
   }
 
   static String wifiConnectionDetail(String message, String? currentSsid) {
-    return currentSsid == null ? message : '$message: $currentSsid';
+    return currentSsid == null ? '暂无' : '$message ($currentSsid)';
   }
 
   static String wifiConnectFailed(String message) => '$message，稍后重试...';
