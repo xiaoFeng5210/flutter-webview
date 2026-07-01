@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:plugin_wifi_connect/plugin_wifi_connect.dart';
 import 'package:wifi_scan/wifi_scan.dart';
+
+import 'startup_messages.dart';
 
 /// 目标 Wi-Fi 密码统一配置。
 ///
 /// 如果 PAD 设备 Wi-Fi 是开放网络，保持空字符串即可；如果有密码，直接填在这里，
 /// 启动页扫描到目标 SSID 后会自动使用这个密码连接。
-const String targetWifiPassword = '';
+const String targetWifiPassword = '88888888';
 
 /// 目标 Wi-Fi 连接参数统一配置。
 const WifiConnectionOptions targetWifiConnectionOptions = WifiConnectionOptions(
@@ -56,16 +59,22 @@ class WifiConnectionResult {
 
 /// Returns whether Android Wi-Fi is enabled.
 ///
-/// The plugin only supports this check on Android. Other platforms return
-/// false from the plugin, so callers should treat this as Android-specific.
-Future<bool> isWifiEnabled() => PluginWifiConnect.isEnabled;
+/// plugin_wifi_connect 2.0.1 exposes this Dart API but does not implement the
+/// native MethodChannel handler. Treat the result as best-effort only.
+Future<bool> isWifiEnabled() async {
+  try {
+    return await PluginWifiConnect.isEnabled;
+  } on MissingPluginException {
+    return false;
+  }
+}
 
 /// Requests Android to enable Wi-Fi.
 ///
-/// On modern Android versions the OS may ignore direct Wi-Fi toggles or require
-/// user action. This helper intentionally does not throw for unsupported
-/// platforms; the following scan/connect step remains the source of truth.
-Future<void> activateWifiIfSupported() => PluginWifiConnect.activateWifi();
+/// plugin_wifi_connect 2.0.1 exposes this Dart API but does not implement the
+/// native MethodChannel handler, so calling it throws MissingPluginException.
+/// Keep this as a no-op wrapper and let scan/connect APIs report the real state.
+Future<void> activateWifiIfSupported() async {}
 
 /// Reads the currently connected SSID and strips platform quoting.
 Future<String?> getCurrentWifiSsid() async {
@@ -82,9 +91,9 @@ Future<bool> disconnectFromPluginWifi() async {
 /// Connects to a scanned Wi-Fi access point.
 ///
 /// [accessPoint] comes from wifi_scan and gives us the SSID plus capabilities
-/// for deciding whether this looks like an open network. plugin_wifi_connect
-/// connects by SSID/prefix, not by BSSID, so the selected access point's SSID is
-/// the value passed to the native connection API.
+/// for deciding whether this looks like an open network. The keyword match
+/// happens before this function is called, so the native connection API receives
+/// the exact SSID found by scanning.
 Future<WifiConnectionResult> connectToScannedAccessPoint(
   WiFiAccessPoint accessPoint, {
   WifiConnectionOptions options = const WifiConnectionOptions(),
@@ -93,7 +102,7 @@ Future<WifiConnectionResult> connectToScannedAccessPoint(
   if (targetSsid == null || targetSsid.isEmpty) {
     return const WifiConnectionResult(
       success: false,
-      message: '目标 Wi-Fi SSID 为空，无法连接',
+      message: StartupMessages.wifiConnectEmptySsid,
       targetSsid: '',
     );
   }
@@ -103,19 +112,17 @@ Future<WifiConnectionResult> connectToScannedAccessPoint(
     if (isSameWifiSsid(currentSsid, targetSsid)) {
       return WifiConnectionResult(
         success: true,
-        message: '已连接目标 Wi-Fi',
+        message: StartupMessages.wifiConnectAlreadyConnected,
         targetSsid: targetSsid,
         currentSsid: currentSsid,
       );
     }
 
-    await activateWifiIfSupported();
-
     final needsPassword = _requiresPassword(accessPoint);
     if (needsPassword && !options.hasPassword) {
       return WifiConnectionResult(
         success: false,
-        message: '目标 Wi-Fi 需要密码，请先配置密码',
+        message: StartupMessages.wifiConnectMissingPassword,
         targetSsid: targetSsid,
         currentSsid: currentSsid,
       );
@@ -131,7 +138,9 @@ Future<WifiConnectionResult> connectToScannedAccessPoint(
 
     return WifiConnectionResult(
       success: success,
-      message: success ? '目标 Wi-Fi 连接成功' : '目标 Wi-Fi 连接失败',
+      message: success
+          ? StartupMessages.wifiConnectResultSuccess
+          : StartupMessages.wifiConnectResultFailed,
       targetSsid: targetSsid,
       currentSsid: latestSsid,
     );
@@ -140,7 +149,7 @@ Future<WifiConnectionResult> connectToScannedAccessPoint(
     debugPrintStack(stackTrace: stackTrace);
     return WifiConnectionResult(
       success: false,
-      message: '目标 Wi-Fi 连接异常',
+      message: StartupMessages.wifiConnectException,
       targetSsid: targetSsid,
       error: error,
     );
@@ -156,7 +165,7 @@ Future<bool> connectToOpenWifi(String ssid, {bool saveNetwork = false}) async {
   return connected ?? false;
 }
 
-/// Connects to a secure network by exact SSID.
+/// *连接的核心方法  通过SSID和密码.
 Future<bool> connectToSecureWifi(
   String ssid,
   String password, {
@@ -172,36 +181,6 @@ Future<bool> connectToSecureWifi(
     isWpa3: isWpa3,
     saveNetwork: saveNetwork,
     isHidden: isHidden,
-  );
-  return connected ?? false;
-}
-
-/// Connects to the nearest open network whose SSID starts with [ssidPrefix].
-Future<bool> connectToOpenWifiByPrefix(
-  String ssidPrefix, {
-  bool saveNetwork = false,
-}) async {
-  final connected = await PluginWifiConnect.connectByPrefix(
-    ssidPrefix,
-    saveNetwork: saveNetwork,
-  );
-  return connected ?? false;
-}
-
-/// Connects to the nearest secure network whose SSID starts with [ssidPrefix].
-Future<bool> connectToSecureWifiByPrefix(
-  String ssidPrefix,
-  String password, {
-  bool isWep = false,
-  bool isWpa3 = false,
-  bool saveNetwork = false,
-}) async {
-  final connected = await PluginWifiConnect.connectToSecureNetworkByPrefix(
-    ssidPrefix,
-    password,
-    isWep: isWep,
-    isWpa3: isWpa3,
-    saveNetwork: saveNetwork,
   );
   return connected ?? false;
 }

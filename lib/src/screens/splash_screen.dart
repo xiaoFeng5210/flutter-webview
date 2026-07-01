@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:wifi_scan/wifi_scan.dart';
 
+import '../utils/startup_messages.dart';
 import '../utils/url_config.dart';
 import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
-const String _targetWifiSsidKeyword = 'lebai';
+const String _targetWifiSsidKeyword = 'Guest';
 const Duration _wifiScanInterval = Duration(seconds: 5);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
+const Duration _wifiScanRetryDelay = Duration(seconds: 10);
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,7 +23,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   String _currentUrl = '';
-  String _startupMessage = '正在准备启动流程...';
+  String _startupMessage = StartupMessages.preparing;
   String? _matchedWifiInfo;
   String? _wifiConnectionInfo;
   WiFiAccessPoint? _matchedWifiPoint;
@@ -48,32 +50,48 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _runStartupFlow() async {
     await _loadCurrentUrl();
-    final isWifiReady = await _waitForTargetWifi();
-    if (!mounted || !isWifiReady) return;
+    final isWifiFound = await _waitForTargetWifi();
+    if (!mounted || !isWifiFound) return;
+
+    if (_matchedWifiPoint != null) {
+      final isWifiConnected = await _waitForWifiConnection();
+      if (!mounted || !isWifiConnected) return;
+    }
+
     await _checkAppStatus();
   }
 
   Future<bool> _waitForTargetWifi() async {
     while (mounted) {
       try {
-        _setStartupMessage('正在扫描目标 Wi-Fi...');
+        _setStartupMessage(StartupMessages.wifiFindScanning);
 
         final canStartScan = await WiFiScan.instance.canStartScan(
           askPermissions: true,
         );
         if (canStartScan == CanStartScan.notSupported) {
-          _setStartupMessage('当前平台不支持 Wi-Fi 扫描，继续检测 Web 服务...');
+          _setStartupMessage(StartupMessages.wifiFindUnsupported);
           return true;
         }
         if (canStartScan != CanStartScan.yes) {
-          _setStartupMessage(_scanBlockMessage(canStartScan));
+          _setStartupMessage(StartupMessages.scanBlock(canStartScan));
           await Future.delayed(_wifiScanInterval);
           continue;
         }
 
         final scanStarted = await WiFiScan.instance.startScan();
         if (mounted) {
-          _setStartupMessage(scanStarted ? 'Wi-Fi 寻找中...' : '请打开PAD设备WIFI');
+          _setStartupMessage(
+            scanStarted
+                ? StartupMessages.wifiFindSearching
+                : StartupMessages.wifiFindOpenDeviceWifi,
+          );
+
+          // TODO: 如果扫描失败，则继续扫描
+          if (!scanStarted) {
+            await Future.delayed(_wifiScanRetryDelay);
+            continue;
+          }
         }
         await Future.delayed(_wifiScanResultDelay);
 
@@ -81,11 +99,11 @@ class _SplashScreenState extends State<SplashScreen> {
           askPermissions: true,
         );
         if (canGetResults == CanGetScannedResults.notSupported) {
-          _setStartupMessage('当前平台不支持读取 Wi-Fi 扫描结果，继续检测 Web 服务...');
+          _setStartupMessage(StartupMessages.wifiResultUnsupported);
           return true;
         }
         if (canGetResults != CanGetScannedResults.yes) {
-          _setStartupMessage(_scanResultsBlockMessage(canGetResults));
+          _setStartupMessage(StartupMessages.scanResultsBlock(canGetResults));
           await Future.delayed(_wifiScanInterval);
           continue;
         }
@@ -103,22 +121,22 @@ class _SplashScreenState extends State<SplashScreen> {
           if (mounted) {
             setState(() {
               _matchedWifiInfo = '$ssid (${matchedAccessPoint.level} dBm)';
-              _startupMessage = '已找到目标 Wi-Fi，正在连接...';
+              _startupMessage = StartupMessages.wifiFindSuccess;
             });
           }
           _matchedWifiPoint = matchedAccessPoint;
-          final connected = await _connectMatchedWifi();
-          if (connected) return true;
-          await Future.delayed(_wifiScanInterval);
-          continue;
+          return true;
         }
 
         _setStartupMessage(
-          '扫描到 ${accessPoints.length} 个 Wi-Fi，未找到包含 "$_targetWifiSsidKeyword" 的 SSID，稍后重试...',
+          StartupMessages.wifiNotFound(
+            accessPoints.length,
+            _targetWifiSsidKeyword,
+          ),
         );
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
-        _setStartupMessage('Wi-Fi 扫描失败，稍后重试...');
+        _setStartupMessage(StartupMessages.wifiFindFailed);
       }
 
       await Future.delayed(_wifiScanInterval);
@@ -149,50 +167,24 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return false;
     setState(() {
-      _wifiConnectionInfo = result.currentSsid == null
-          ? result.message
-          : '${result.message}: ${result.currentSsid}';
+      _wifiConnectionInfo = StartupMessages.wifiConnectionDetail(
+        result.message,
+        result.currentSsid,
+      );
       _startupMessage = result.success
-          ? '目标 Wi-Fi 已连接，正在检测 Web 服务...'
-          : '${result.message}，稍后重试...';
+          ? StartupMessages.wifiConnectSuccess
+          : StartupMessages.wifiConnectFailed(result.message);
     });
     return result.success;
   }
 
-  String _scanBlockMessage(CanStartScan result) {
-    switch (result) {
-      case CanStartScan.noLocationPermissionRequired:
-        return '需要定位权限才能扫描 Wi-Fi，请授权后继续...';
-      case CanStartScan.noLocationPermissionDenied:
-        return '定位权限已被拒绝，请在系统设置中允许定位权限...';
-      case CanStartScan.noLocationPermissionUpgradeAccuracy:
-        return '需要开启精确定位才能扫描 Wi-Fi...';
-      case CanStartScan.noLocationServiceDisabled:
-        return '需要开启系统定位服务才能扫描 Wi-Fi...';
-      case CanStartScan.failed:
-        return 'Wi-Fi 扫描启动失败，稍后重试...';
-      case CanStartScan.notSupported:
-        return '当前平台不支持 Wi-Fi 扫描...';
-      case CanStartScan.yes:
-        return 'Wi-Fi 扫描中...';
+  Future<bool> _waitForWifiConnection() async {
+    while (mounted) {
+      final connected = await _connectMatchedWifi();
+      if (connected) return true;
+      await Future.delayed(_wifiScanInterval);
     }
-  }
-
-  String _scanResultsBlockMessage(CanGetScannedResults result) {
-    switch (result) {
-      case CanGetScannedResults.noLocationPermissionRequired:
-        return '需要定位权限才能读取 Wi-Fi 扫描结果，请授权后继续...';
-      case CanGetScannedResults.noLocationPermissionDenied:
-        return '定位权限已被拒绝，请在系统设置中允许定位权限...';
-      case CanGetScannedResults.noLocationPermissionUpgradeAccuracy:
-        return '需要开启精确定位才能读取 Wi-Fi 扫描结果...';
-      case CanGetScannedResults.noLocationServiceDisabled:
-        return '需要开启系统定位服务才能读取 Wi-Fi 扫描结果...';
-      case CanGetScannedResults.notSupported:
-        return '当前平台不支持读取 Wi-Fi 扫描结果...';
-      case CanGetScannedResults.yes:
-        return '正在读取 Wi-Fi 扫描结果...';
-    }
+    return false;
   }
 
   void _setStartupMessage(String message) {
@@ -206,7 +198,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     try {
       await _loadCurrentUrl();
-      _setStartupMessage('正在检测 Web 服务...');
+      _setStartupMessage(StartupMessages.webChecking);
       await Future.delayed(const Duration(seconds: 2));
       final res = await http
           .get(Uri.parse(_currentUrl))
@@ -223,7 +215,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       debugPrint('===========Error checking app status: $e===========');
     }
-    _setStartupMessage('Web 服务暂不可用，稍后重试...');
+    _setStartupMessage(StartupMessages.webUnavailable);
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
       _checkAppStatus();
@@ -409,14 +401,14 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '目标 Wi-Fi: $_targetWifiSsidKeyword',
+                    '${StartupMessages.targetWifiLabel}: $_targetWifiSsidKeyword',
                     style: const TextStyle(fontSize: 24, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
                   if (_lastWifiScanCount > 0) ...[
                     const SizedBox(height: 12),
                     Text(
-                      '最近扫描: $_lastWifiScanCount 个 Wi-Fi',
+                      '${StartupMessages.latestScanLabel}: ${StartupMessages.scanCount(_lastWifiScanCount)}',
                       style: const TextStyle(fontSize: 22, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
@@ -424,7 +416,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   if (_matchedWifiInfo != null) ...[
                     const SizedBox(height: 12),
                     Text(
-                      '匹配 Wi-Fi: $_matchedWifiInfo',
+                      '${StartupMessages.matchedWifiLabel}: $_matchedWifiInfo',
                       style: const TextStyle(fontSize: 22, color: Colors.green),
                       textAlign: TextAlign.center,
                     ),
@@ -432,7 +424,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   if (_wifiConnectionInfo != null) ...[
                     const SizedBox(height: 12),
                     Text(
-                      '连接状态: $_wifiConnectionInfo',
+                      '${StartupMessages.wifiConnectionLabel}: $_wifiConnectionInfo',
                       style: const TextStyle(fontSize: 22, color: Colors.green),
                       textAlign: TextAlign.center,
                     ),
@@ -442,7 +434,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Text(
-                        '当前 URL: $_currentUrl',
+                        '${StartupMessages.currentUrlLabel}: $_currentUrl',
                         style: const TextStyle(
                           fontSize: 22,
                           color: Colors.grey,
