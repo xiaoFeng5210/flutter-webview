@@ -8,7 +8,7 @@ class StartupMessages {
   static const targetWifiLabel = '目标 Wi-Fi';
   static const latestScanLabel = '最近扫描';
   static const matchedWifiLabel = '匹配 Wi-Fi';
-  static const wifiConnectionLabel = '连接状态';
+  static const wifiConnectionLabel = 'WIFI连接状态';
   static const currentUrlLabel = '当前 URL';
 
   static const wifiFindScanning = '正在查找 Wi-Fi...';

@@ -10,9 +10,9 @@ import '../utils/wifi_config.dart';
 import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
-const Duration _wifiScanInterval = Duration(seconds: 5);
+const Duration _wifiScanInterval = Duration(seconds: 10);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
-const Duration _wifiScanRetryDelay = Duration(seconds: 10);
+const Duration _wifiScanRetryDelay = Duration(seconds: 3);
 const Color _primaryActionColor = Color(0xFF1F7A55);
 const Color _secondaryActionColor = Colors.blueAccent;
 const Color _dangerActionColor = Color(0xFFC0392B);
@@ -32,6 +32,9 @@ class _SplashScreenState extends State<SplashScreen> {
   String _startupMessage = StartupMessages.preparing;
   String? _wifiConnectionInfo;
   WiFiAccessPoint? _matchedWifiPoint;
+  int _startupFlowId = 0;
+
+  CanStartScan? _canStartScan;
 
   @override
   void initState() {
@@ -58,75 +61,89 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _startStartupFlow() {
-    _runStartupFlow();
+    final flowId = ++_startupFlowId;
+    _runStartupFlow(flowId);
   }
 
-  Future<void> _runStartupFlow() async {
+  bool _isActiveStartupFlow(int flowId) {
+    return mounted && flowId == _startupFlowId;
+  }
+
+  Future<void> _runStartupFlow(int flowId) async {
     await _loadTargetWifiSsid();
     await _loadCurrentUrl();
-    final isWifiFound = await _waitForTargetWifi();
-    if (!mounted || !isWifiFound) return;
+    if (!_isActiveStartupFlow(flowId)) return;
+
+    final isWifiFound = await _waitForTargetWifi(flowId);
+    if (!_isActiveStartupFlow(flowId) || !isWifiFound) return;
 
     if (_matchedWifiPoint != null) {
-      final isWifiConnected = await _waitForWifiConnection();
-      if (!mounted || !isWifiConnected) return;
+      final isWifiConnected = await _waitForWifiConnection(flowId);
+      if (!_isActiveStartupFlow(flowId) || !isWifiConnected) return;
     }
 
-    await _checkAppStatus();
+    await _checkAppStatus(flowId);
   }
 
-  Future<bool> _waitForTargetWifi() async {
-    while (mounted) {
+  Future<bool> _waitForTargetWifi(int flowId) async {
+    while (_isActiveStartupFlow(flowId)) {
       try {
-        _setStartupMessage(StartupMessages.wifiFindScanning);
+        _setStartupMessage(StartupMessages.wifiFindScanning, flowId: flowId);
 
-        final canStartScan = await WiFiScan.instance.canStartScan(
+        _canStartScan = await WiFiScan.instance.canStartScan(
           askPermissions: true,
         );
-        if (canStartScan == CanStartScan.notSupported) {
-          _setStartupMessage(StartupMessages.wifiFindUnsupported);
+        if (!_isActiveStartupFlow(flowId)) return false;
+        if (_canStartScan == CanStartScan.notSupported) {
+          _setStartupMessage(
+            StartupMessages.wifiFindUnsupported,
+            flowId: flowId,
+          );
           return true;
         }
-        if (canStartScan != CanStartScan.yes) {
-          _setStartupMessage(StartupMessages.scanBlock(canStartScan));
+        debugPrint('===========canStartScan: $_canStartScan============');
+        if (_canStartScan != CanStartScan.yes) {
+          _setStartupMessage(
+            StartupMessages.scanBlock(_canStartScan!),
+            flowId: flowId,
+          );
           await Future.delayed(_wifiScanInterval);
           continue;
         }
 
         final scanStarted = await WiFiScan.instance.startScan();
-        if (mounted) {
-          _setStartupMessage(
-            scanStarted
-                ? StartupMessages.wifiFindSearching
-                : StartupMessages.wifiFindOpenDeviceWifi,
-          );
-
-          // TODO: 如果扫描失败，则继续扫描
-          if (!scanStarted) {
-            await Future.delayed(_wifiScanRetryDelay);
-            continue;
-          }
+        if (_isActiveStartupFlow(flowId)) {
+          _setStartupMessage(StartupMessages.wifiFindSearching, flowId: flowId);
         }
         await Future.delayed(_wifiScanResultDelay);
+        if (!_isActiveStartupFlow(flowId)) return false;
 
         final canGetResults = await WiFiScan.instance.canGetScannedResults(
           askPermissions: true,
         );
+        if (!_isActiveStartupFlow(flowId)) return false;
         if (canGetResults == CanGetScannedResults.notSupported) {
-          _setStartupMessage(StartupMessages.wifiResultUnsupported);
+          _setStartupMessage(
+            StartupMessages.wifiResultUnsupported,
+            flowId: flowId,
+          );
           return true;
         }
         if (canGetResults != CanGetScannedResults.yes) {
-          _setStartupMessage(StartupMessages.scanResultsBlock(canGetResults));
+          _setStartupMessage(
+            StartupMessages.scanResultsBlock(canGetResults),
+            flowId: flowId,
+          );
           await Future.delayed(_wifiScanInterval);
           continue;
         }
 
         final accessPoints = await WiFiScan.instance.getScannedResults();
+        if (!_isActiveStartupFlow(flowId)) return false;
         final matchedAccessPoint = _findTargetAccessPoint(accessPoints);
 
         if (matchedAccessPoint != null) {
-          if (mounted) {
+          if (_isActiveStartupFlow(flowId)) {
             setState(() {
               _startupMessage = StartupMessages.wifiFindSuccess;
             });
@@ -137,10 +154,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
         _setStartupMessage(
           StartupMessages.wifiNotFound(accessPoints.length, _targetWifiSsid),
+          flowId: flowId,
         );
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
-        _setStartupMessage(StartupMessages.wifiFindFailed);
+        _setStartupMessage(StartupMessages.wifiFindFailed, flowId: flowId);
       }
 
       await Future.delayed(_wifiScanInterval);
@@ -160,7 +178,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return matches.isEmpty ? null : matches.first;
   }
 
-  Future<bool> _connectMatchedWifi() async {
+  Future<bool> _connectMatchedWifi(int flowId) async {
     final accessPoint = _matchedWifiPoint;
     if (accessPoint == null) return false;
 
@@ -169,7 +187,7 @@ class _SplashScreenState extends State<SplashScreen> {
       options: targetWifiConnectionOptions,
     );
 
-    if (!mounted) return false;
+    if (!_isActiveStartupFlow(flowId)) return false;
     setState(() {
       _wifiConnectionInfo = StartupMessages.wifiConnectionDetail(
         result.message,
@@ -182,35 +200,38 @@ class _SplashScreenState extends State<SplashScreen> {
     return result.success;
   }
 
-  Future<bool> _waitForWifiConnection() async {
-    while (mounted) {
-      final connected = await _connectMatchedWifi();
+  Future<bool> _waitForWifiConnection(int flowId) async {
+    while (_isActiveStartupFlow(flowId)) {
+      final connected = await _connectMatchedWifi(flowId);
       if (connected) return true;
       await Future.delayed(_wifiScanInterval);
     }
     return false;
   }
 
-  void _setStartupMessage(String message) {
-    if (!mounted) return;
+  void _setStartupMessage(String message, {int? flowId}) {
+    if (!mounted || (flowId != null && flowId != _startupFlowId)) return;
     setState(() {
       _startupMessage = message;
     });
   }
 
-  Future<void> _checkAppStatus() async {
-    if (!mounted) return;
+  Future<void> _checkAppStatus(int flowId) async {
+    if (!_isActiveStartupFlow(flowId)) return;
+    final navigator = Navigator.of(context);
     try {
       await _loadCurrentUrl();
-      _setStartupMessage(StartupMessages.webChecking);
+      if (!_isActiveStartupFlow(flowId)) return;
+      _setStartupMessage(StartupMessages.webChecking, flowId: flowId);
       await Future.delayed(const Duration(seconds: 2));
+      if (!_isActiveStartupFlow(flowId)) return;
       final res = await http
           .get(Uri.parse(_currentUrl))
           .timeout(const Duration(seconds: 8));
+      if (!_isActiveStartupFlow(flowId)) return;
       if (res.statusCode == 200) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
+        if (_isActiveStartupFlow(flowId) && navigator.mounted) {
+          navigator.pushReplacement(
             MaterialPageRoute(builder: (context) => const WebViewScreen()),
           );
         }
@@ -219,10 +240,10 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       debugPrint('===========Error checking app status: $e===========');
     }
-    _setStartupMessage(StartupMessages.webUnavailable);
+    _setStartupMessage(StartupMessages.webUnavailable, flowId: flowId);
     await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
-      _checkAppStatus();
+    if (_isActiveStartupFlow(flowId)) {
+      await _checkAppStatus(flowId);
     }
   }
 
@@ -294,11 +315,15 @@ class _SplashScreenState extends State<SplashScreen> {
                         );
                         if (mounted) {
                           navigator.pop();
-                          setState(() {
-                            _targetWifiSsid = newSsid;
-                            _matchedWifiPoint = null;
-                            _wifiConnectionInfo = null;
-                          });
+                          if (success) {
+                            setState(() {
+                              _targetWifiSsid = newSsid;
+                              _matchedWifiPoint = null;
+                              _wifiConnectionInfo = null;
+                              _startupMessage = StartupMessages.preparing;
+                            });
+                            _startStartupFlow();
+                          }
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text(
@@ -586,7 +611,7 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Column(
         children: [
           _buildControlPanel(),
-          // 主要内容区域
+          // * 主要内容区域
           Expanded(
             child: Center(
               child: Column(
@@ -594,10 +619,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 24),
-                  Text(
-                    _startupMessage,
-                    style: const TextStyle(fontSize: 36),
-                    textAlign: TextAlign.center,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 24, right: 24),
+                    child: Text(
+                      _startupMessage,
+                      style: const TextStyle(fontSize: 36),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   // Text(
