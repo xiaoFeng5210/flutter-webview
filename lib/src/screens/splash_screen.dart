@@ -6,10 +6,10 @@ import 'package:wifi_scan/wifi_scan.dart';
 
 import '../utils/startup_messages.dart';
 import '../utils/url_config.dart';
+import '../utils/wifi_config.dart';
 import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
-const String _targetWifiSsidKeyword = 'staff';
 const Duration _wifiScanInterval = Duration(seconds: 5);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
 const Duration _wifiScanRetryDelay = Duration(seconds: 10);
@@ -23,6 +23,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   String _currentUrl = '';
+  String _targetWifiSsid = WifiConfig.defaultSsid;
   String _startupMessage = StartupMessages.preparing;
   String? _matchedWifiInfo;
   String? _wifiConnectionInfo;
@@ -44,11 +45,21 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
+  Future<void> _loadTargetWifiSsid() async {
+    final ssid = await WifiConfig.getTargetSsid();
+    if (mounted) {
+      setState(() {
+        _targetWifiSsid = ssid;
+      });
+    }
+  }
+
   void _startStartupFlow() {
     _runStartupFlow();
   }
 
   Future<void> _runStartupFlow() async {
+    await _loadTargetWifiSsid();
     await _loadCurrentUrl();
     final isWifiFound = await _waitForTargetWifi();
     if (!mounted || !isWifiFound) return;
@@ -129,10 +140,7 @@ class _SplashScreenState extends State<SplashScreen> {
         }
 
         _setStartupMessage(
-          StartupMessages.wifiNotFound(
-            accessPoints.length,
-            _targetWifiSsidKeyword,
-          ),
+          StartupMessages.wifiNotFound(accessPoints.length, _targetWifiSsid),
         );
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
@@ -145,7 +153,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   WiFiAccessPoint? _findTargetAccessPoint(List<WiFiAccessPoint> accessPoints) {
-    final keyword = _targetWifiSsidKeyword.trim().toLowerCase();
+    final keyword = _targetWifiSsid.trim().toLowerCase();
     final matches = accessPoints.where((accessPoint) {
       final ssid = accessPoint.ssid.trim();
       if (ssid.isEmpty) return false;
@@ -220,6 +228,112 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       _checkAppStatus();
     }
+  }
+
+  Future<void> _showWifiSettingsDialog() async {
+    final TextEditingController wifiController = TextEditingController(
+      text: _targetWifiSsid,
+    );
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            width: MediaQuery.of(context).size.width * 0.85,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '设置目标 Wi-Fi',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: wifiController,
+                  decoration: const InputDecoration(
+                    labelText: 'Wi-Fi 名称',
+                    labelStyle: TextStyle(fontSize: 24),
+                    hintText: '例如: Staff',
+                    hintStyle: TextStyle(fontSize: 22),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('返回', style: TextStyle(fontSize: 24)),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final newSsid = wifiController.text.trim();
+                        if (newSsid.isEmpty) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Wi-Fi 名称不能为空',
+                                style: TextStyle(fontSize: 26),
+                              ),
+                              backgroundColor: Colors.red,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final success = await WifiConfig.saveTargetSsid(
+                          newSsid,
+                        );
+                        if (mounted) {
+                          navigator.pop();
+                          setState(() {
+                            _targetWifiSsid = newSsid;
+                            _matchedWifiInfo = null;
+                            _matchedWifiPoint = null;
+                            _wifiConnectionInfo = null;
+                          });
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success ? '目标 Wi-Fi 保存成功' : '目标 Wi-Fi 保存失败',
+                                style: const TextStyle(fontSize: 26),
+                              ),
+                              backgroundColor: success
+                                  ? Colors.green
+                                  : Colors.red,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                      ),
+                      child: const Text('保存', style: TextStyle(fontSize: 24)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _showUrlSettingsDialog() async {
@@ -350,38 +464,73 @@ class _SplashScreenState extends State<SplashScreen> {
           // 顶部按钮区域
           Padding(
             padding: const EdgeInsets.only(top: 40, bottom: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                ElevatedButton(
-                  onPressed: _showUrlSettingsDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _showWifiSettingsDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        side: const BorderSide(color: Colors.blue, width: 2),
+                      ),
+                      child: const Text(
+                        '设置目标 Wi-Fi',
+                        style: TextStyle(fontSize: 24),
+                      ),
                     ),
-                    side: const BorderSide(color: Colors.green, width: 2),
-                  ),
-                  child: const Text(
-                    '设置 WebView URL',
-                    style: TextStyle(fontSize: 24),
-                  ),
+                    const SizedBox(width: 20),
+                    Text(
+                      '${StartupMessages.targetWifiLabel}: $_targetWifiSsid',
+                      style: const TextStyle(fontSize: 24, color: Colors.grey),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 20),
-                ElevatedButton(
-                  onPressed: _resetUrl,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _showUrlSettingsDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        side: const BorderSide(color: Colors.green, width: 2),
+                      ),
+                      child: const Text(
+                        '设置 WebView URL',
+                        style: TextStyle(fontSize: 24),
+                      ),
                     ),
-                    side: const BorderSide(color: Colors.orange, width: 2),
-                  ),
-                  child: const Text('重置 URL', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 20),
+                    ElevatedButton(
+                      onPressed: _resetUrl,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        side: const BorderSide(color: Colors.orange, width: 2),
+                      ),
+                      child: const Text(
+                        '重置 URL',
+                        style: TextStyle(fontSize: 24),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -401,7 +550,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   const SizedBox(height: 16),
                   // Text(
-                  //   '${StartupMessages.targetWifiLabel}: $_targetWifiSsidKeyword',
+                  //   '${StartupMessages.targetWifiLabel}: $_targetWifiSsid',
                   //   style: const TextStyle(fontSize: 24, color: Colors.grey),
                   //   textAlign: TextAlign.center,
                   // ),
