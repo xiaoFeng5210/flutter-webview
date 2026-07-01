@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:wifi_iot/wifi_iot.dart';
 import 'package:wifi_scan/wifi_scan.dart';
 
 import '../utils/startup_messages.dart';
@@ -88,6 +89,19 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<bool> _waitForTargetWifi(int flowId) async {
     while (_isActiveStartupFlow(flowId)) {
       try {
+        final isDeviceWifiEnabled = await WiFiForIoTPlugin.isEnabled();
+        debugPrint('===========isDeviceWifiEnabled: $isDeviceWifiEnabled============');
+        if (!_isActiveStartupFlow(flowId)) return false;
+        if (!isDeviceWifiEnabled) {
+          _setStartupMessage(
+            StartupMessages.deviceWifiDisabled,
+            flowId: flowId,
+          );
+          _showTopErrorSnackBar(StartupMessages.deviceWifiDisabled);
+          await Future.delayed(const Duration(seconds: 3));
+          continue;
+        }
+
         _setStartupMessage(StartupMessages.wifiFindScanning, flowId: flowId);
 
         _canStartScan = await WiFiScan.instance.canStartScan(
@@ -101,7 +115,6 @@ class _SplashScreenState extends State<SplashScreen> {
           );
           return true;
         }
-        debugPrint('===========canStartScan: $_canStartScan============');
         if (_canStartScan != CanStartScan.yes) {
           _setStartupMessage(
             StartupMessages.scanBlock(_canStartScan!),
@@ -113,7 +126,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
         final scanStarted = await WiFiScan.instance.startScan();
         if (_isActiveStartupFlow(flowId)) {
-          _setStartupMessage(StartupMessages.wifiFindSearching, flowId: flowId);
+          _setStartupMessage(
+            scanStarted
+                ? StartupMessages.wifiFindSearching
+                : StartupMessages.wifiFindOpenDeviceWifi,
+            flowId: flowId,
+          );
+          if (!scanStarted) {
+            await Future.delayed(_wifiScanRetryDelay);
+            continue;
+          }
         }
         await Future.delayed(_wifiScanResultDelay);
         if (!_isActiveStartupFlow(flowId)) return false;
@@ -214,6 +236,26 @@ class _SplashScreenState extends State<SplashScreen> {
     setState(() {
       _startupMessage = message;
     });
+  }
+
+  void _showTopErrorSnackBar(String message) {
+    if (!mounted) return;
+    final bottomMargin = MediaQuery.sizeOf(context).height - 132;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontSize: 32)),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          left: 48,
+          right: 48,
+          bottom: bottomMargin > 0 ? bottomMargin : 0,
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   Future<void> _checkAppStatus(int flowId) async {
