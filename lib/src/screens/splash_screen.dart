@@ -30,6 +30,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   String _currentUrl = '';
   String _targetWifiSsid = WifiConfig.defaultSsid;
+  String _targetWifiPassword = WifiConfig.defaultPassword;
   String _startupMessage = StartupMessages.preparing;
   String? _wifiConnectionInfo;
   WiFiAccessPoint? _matchedWifiPoint;
@@ -54,9 +55,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _loadTargetWifiSsid() async {
     final ssid = await WifiConfig.getTargetSsid();
+    final password = await WifiConfig.getTargetPassword();
     if (mounted) {
       setState(() {
         _targetWifiSsid = ssid;
+        _targetWifiPassword = password;
       });
     }
   }
@@ -90,7 +93,9 @@ class _SplashScreenState extends State<SplashScreen> {
     while (_isActiveStartupFlow(flowId)) {
       try {
         final isDeviceWifiEnabled = await WiFiForIoTPlugin.isEnabled();
-        debugPrint('===========isDeviceWifiEnabled: $isDeviceWifiEnabled============');
+        debugPrint(
+          '===========isDeviceWifiEnabled: $isDeviceWifiEnabled============',
+        );
         if (!_isActiveStartupFlow(flowId)) return false;
         if (!isDeviceWifiEnabled) {
           _setStartupMessage(
@@ -126,10 +131,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
         final scanStarted = await WiFiScan.instance.startScan();
         if (_isActiveStartupFlow(flowId)) {
-          _setStartupMessage(
-            StartupMessages.wifiFindSearching,
-            flowId: flowId,
-          );
+          _setStartupMessage(StartupMessages.wifiFindSearching, flowId: flowId);
           if (!scanStarted) {
             await Future.delayed(_wifiScanRetryDelay);
             continue;
@@ -204,7 +206,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final result = await connectToScannedAccessPoint(
       accessPoint,
-      options: targetWifiConnectionOptions,
+      options: WifiConnectionOptions(
+        password: _targetWifiPassword,
+        saveNetwork: true,
+      ),
     );
 
     if (!_isActiveStartupFlow(flowId)) return false;
@@ -291,106 +296,173 @@ class _SplashScreenState extends State<SplashScreen> {
     final TextEditingController wifiController = TextEditingController(
       text: _targetWifiSsid,
     );
+    final TextEditingController passwordController = TextEditingController(
+      text: _targetWifiPassword,
+    );
+    bool obscurePassword = true;
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            width: MediaQuery.of(context).size.width * 0.85,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '设置目标 Wi-Fi',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: wifiController,
-                  decoration: const InputDecoration(
-                    labelText: 'Wi-Fi 名称',
-                    labelStyle: TextStyle(fontSize: 24),
-                    hintText: '例如: Staff',
-                    hintStyle: TextStyle(fontSize: 22),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 20,
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 24),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                width: MediaQuery.of(context).size.width * 0.85,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('返回', style: TextStyle(fontSize: 24)),
+                    const Text(
+                      '设置目标 Wi-Fi',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final navigator = Navigator.of(context);
-                        final messenger = ScaffoldMessenger.of(context);
-                        final newSsid = wifiController.text.trim();
-                        if (newSsid.isEmpty) {
-                          messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Wi-Fi 名称不能为空',
-                                style: TextStyle(fontSize: 26),
-                              ),
-                              backgroundColor: Colors.red,
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          return;
-                        }
-
-                        final success = await WifiConfig.saveTargetSsid(
-                          newSsid,
-                        );
-                        if (mounted) {
-                          navigator.pop();
-                          if (success) {
-                            setState(() {
-                              _targetWifiSsid = newSsid;
-                              _matchedWifiPoint = null;
-                              _wifiConnectionInfo = null;
-                              _startupMessage = StartupMessages.preparing;
-                            });
-                            _startStartupFlow();
-                          }
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success ? '目标 Wi-Fi 保存成功' : '目标 Wi-Fi 保存失败',
-                                style: const TextStyle(fontSize: 26),
-                              ),
-                              backgroundColor: success
-                                  ? Colors.green
-                                  : Colors.red,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: wifiController,
+                      decoration: const InputDecoration(
+                        labelText: 'Wi-Fi 名称',
+                        labelStyle: TextStyle(fontSize: 24),
+                        hintText: '例如: Staff',
+                        hintStyle: TextStyle(fontSize: 22),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 20,
                         ),
                       ),
-                      child: const Text('保存', style: TextStyle(fontSize: 24)),
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Wi-Fi 密码',
+                        labelStyle: const TextStyle(fontSize: 24),
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 20,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          iconSize: 30,
+                          tooltip: obscurePassword ? '显示密码' : '隐藏密码',
+                          onPressed: () {
+                            setDialogState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      '一般不用修改；如需变更请联系管理员。',
+                      style: TextStyle(fontSize: 20, color: _mutedTextColor),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            '返回',
+                            style: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final navigator = Navigator.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            final newSsid = wifiController.text.trim();
+                            final newPassword = passwordController.text.trim();
+                            if (newSsid.isEmpty) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Wi-Fi 名称不能为空',
+                                    style: TextStyle(fontSize: 26),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+                            if (newPassword.isEmpty) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Wi-Fi 密码不能为空',
+                                    style: TextStyle(fontSize: 26),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final success = await WifiConfig.saveTargetWifi(
+                              ssid: newSsid,
+                              password: newPassword,
+                            );
+                            if (mounted) {
+                              navigator.pop();
+                              if (success) {
+                                setState(() {
+                                  _targetWifiSsid = newSsid;
+                                  _targetWifiPassword = newPassword;
+                                  _matchedWifiPoint = null;
+                                  _wifiConnectionInfo = '未连接';
+                                  _startupMessage = StartupMessages.preparing;
+                                });
+                                _startStartupFlow();
+                              }
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success ? '目标 Wi-Fi 保存成功' : '目标 Wi-Fi 保存失败',
+                                    style: const TextStyle(fontSize: 26),
+                                  ),
+                                  backgroundColor: success
+                                      ? Colors.green
+                                      : Colors.red,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: const Text(
+                            '保存',
+                            style: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

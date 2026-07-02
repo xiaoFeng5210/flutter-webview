@@ -4,12 +4,13 @@ import 'package:plugin_wifi_connect/plugin_wifi_connect.dart';
 import 'package:wifi_scan/wifi_scan.dart';
 
 import 'startup_messages.dart';
+import 'wifi_config.dart';
 
 /// 目标 Wi-Fi 密码统一配置。
 ///
 /// 如果 PAD 设备 Wi-Fi 是开放网络，保持空字符串即可；如果有密码，直接填在这里，
 /// 启动页扫描到目标 SSID 后会自动使用这个密码连接。
-const String targetWifiPassword = '33554432';
+const String targetWifiPassword = WifiConfig.defaultPassword;
 
 /// 目标 Wi-Fi 连接参数统一配置。
 const WifiConnectionOptions targetWifiConnectionOptions = WifiConnectionOptions(

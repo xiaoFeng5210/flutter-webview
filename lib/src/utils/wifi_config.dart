@@ -1,16 +1,35 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WifiConfig {
-  static const String _key = 'target_wifi_ssid';
+  static const String _ssidKey = 'target_wifi_ssid';
+  static const String _passwordKey = 'target_wifi_password';
   static const String defaultSsid = 'Staff';
+  static const String defaultPassword = '33554432';
 
   static Future<String> getTargetSsid() async {
-    final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(_key)?.trim();
-    if (value == null || value.isEmpty) {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString(_ssidKey)?.trim();
+      if (value == null || value.isEmpty) {
+        return defaultSsid;
+      }
+      return value;
+    } catch (e) {
       return defaultSsid;
     }
-    return value;
+  }
+
+  static Future<String> getTargetPassword() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString(_passwordKey)?.trim();
+      if (value == null || value.isEmpty) {
+        return defaultPassword;
+      }
+      return value;
+    } catch (e) {
+      return defaultPassword;
+    }
   }
 
   static Future<bool> saveTargetSsid(String ssid) async {
@@ -18,6 +37,28 @@ class WifiConfig {
     if (value.isEmpty) return false;
 
     final prefs = await SharedPreferences.getInstance();
-    return prefs.setString(_key, value);
+    return prefs.setString(_ssidKey, value);
+  }
+
+  static Future<bool> saveTargetPassword(String password) async {
+    final value = password.trim();
+    if (value.isEmpty) return false;
+
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.setString(_passwordKey, value);
+  }
+
+  static Future<bool> saveTargetWifi({
+    required String ssid,
+    required String password,
+  }) async {
+    final ssidValue = ssid.trim();
+    final passwordValue = password.trim();
+    if (ssidValue.isEmpty || passwordValue.isEmpty) return false;
+
+    final prefs = await SharedPreferences.getInstance();
+    final ssidSaved = await prefs.setString(_ssidKey, ssidValue);
+    final passwordSaved = await prefs.setString(_passwordKey, passwordValue);
+    return ssidSaved && passwordSaved;
   }
 }
