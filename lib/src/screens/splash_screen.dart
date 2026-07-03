@@ -178,6 +178,8 @@ class _SplashScreenState extends State<SplashScreen> {
           StartupMessages.wifiNotFound(accessPoints.length, _targetWifiSsid),
           flowId: flowId,
         );
+        _showTopErrorSnackBar("请检查机器人是否开启", durationSeconds: 6);
+
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
         _setStartupMessage(StartupMessages.wifiFindFailed, flowId: flowId);
@@ -241,7 +243,7 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
-  void _showTopErrorSnackBar(String message) {
+  void _showTopErrorSnackBar(String message, {int durationSeconds = 4}) {
     if (!mounted) return;
     final bottomMargin = MediaQuery.sizeOf(context).height - 132;
     final messenger = ScaffoldMessenger.of(context);
@@ -256,7 +258,7 @@ class _SplashScreenState extends State<SplashScreen> {
           right: 48,
           bottom: bottomMargin > 0 ? bottomMargin : 0,
         ),
-        duration: const Duration(seconds: 4),
+        duration: Duration(seconds: durationSeconds),
       ),
     );
   }
@@ -367,7 +369,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      '一般不用修改；如需变更请联系管理员。',
+                      'Wi-Fi密码如需变更请联系管理员。',
                       style: TextStyle(fontSize: 20, color: _mutedTextColor),
                     ),
                     const SizedBox(height: 32),
@@ -465,6 +467,33 @@ class _SplashScreenState extends State<SplashScreen> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _resetWifiConfig() async {
+    final success = await WifiConfig.resetTargetWifi();
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        _targetWifiSsid = WifiConfig.defaultSsid;
+        _targetWifiPassword = WifiConfig.defaultPassword;
+        _matchedWifiPoint = null;
+        _wifiConnectionInfo = '未连接';
+        _startupMessage = StartupMessages.preparing;
+      });
+      _startStartupFlow();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Wi-Fi 配置已重置' : 'Wi-Fi 配置重置失败',
+          style: const TextStyle(fontSize: 26),
+        ),
+        backgroundColor: success ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
@@ -687,6 +716,14 @@ class _SplashScreenState extends State<SplashScreen> {
                       onPressed: _showWifiSettingsDialog,
                       style: _controlButtonStyle(color: _secondaryActionColor),
                       child: const Text('修改WIFI'),
+                    ),
+                    ElevatedButton(
+                      onPressed: _resetWifiConfig,
+                      style: _controlButtonStyle(
+                        color: _mutedTextColor,
+                        minWidth: 112,
+                      ),
+                      child: const Text('重置'),
                     ),
                   ],
                 ),

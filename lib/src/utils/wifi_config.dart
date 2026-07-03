@@ -3,8 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class WifiConfig {
   static const String _ssidKey = 'target_wifi_ssid';
   static const String _passwordKey = 'target_wifi_password';
-  static const String defaultSsid = 'Staff';
-  static const String defaultPassword = '33554432';
+  static const String defaultSsid = 'robot-noodles';
+  static const String defaultPassword = 'lebairobot';
 
   static Future<String> getTargetSsid() async {
     try {
@@ -60,5 +60,14 @@ class WifiConfig {
     final ssidSaved = await prefs.setString(_ssidKey, ssidValue);
     final passwordSaved = await prefs.setString(_passwordKey, passwordValue);
     return ssidSaved && passwordSaved;
+  }
+
+  static Future<bool> resetTargetWifi() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ssidRemoved =
+        !prefs.containsKey(_ssidKey) || await prefs.remove(_ssidKey);
+    final passwordRemoved =
+        !prefs.containsKey(_passwordKey) || await prefs.remove(_passwordKey);
+    return ssidRemoved && passwordRemoved;
   }
 }

@@ -14,13 +14,13 @@ class StartupMessages {
   static const wifiFindScanning = '正在查找 Wi-Fi...';
   static const wifiFindSearching = 'Wi-Fi 查找中...';
   static const wifiFindSuccess = 'Wi-Fi 查找成功，正在连接...';
-  static const wifiFindFailed = 'Wi-Fi 查找异常，稍后重试...';
+  static const wifiFindFailed = 'Wi-Fi 未查找成功，稍后重试...';
   static const deviceWifiDisabled = '请先开启设备(PAD)的wifi...';
   static const wifiFindUnsupported = '当前平台不支持 Wi-Fi 查找，继续检测 Web 服务...';
   static const wifiResultUnsupported = '当前平台不支持读取 Wi-Fi 结果，继续检测 Web 服务...';
 
   static const wifiConnectSuccess = 'Wi-Fi 连接成功，正在检测 Web 服务...';
-  static const wifiConnectRetry = 'Wi-Fi 连接异常，稍后重试...';
+  static const wifiConnectRetry = 'Wi-Fi 连接失败，稍后重试...';
   static const wifiConnectAlreadyConnected = '已连接目标 Wi-Fi';
   static const wifiConnectResultSuccess = '目标 Wi-Fi 连接成功';
   static const wifiConnectResultFailed = '目标 Wi-Fi 连接失败';
@@ -29,12 +29,12 @@ class StartupMessages {
   static const wifiConnectException = '目标 Wi-Fi 连接异常';
 
   static const webChecking = '正在检测 Web 服务...';
-  static const webUnavailable = 'Web 服务暂不可用，稍后重试...';
+  static const webUnavailable = 'Web 服务未连接上，稍后重试...';
 
   static String scanCount(int count) => '$count 个 Wi-Fi';
 
   static String wifiNotFound(int count, String keyword) {
-    return '扫描到 $count 个 Wi-Fi，未找到 "$keyword"，稍后重试...';
+    return '未找到目标 Wi-Fi "$keyword", 请检查机器人是否开机? 会重新尝试连接...';
   }
 
   static String wifiConnectionDetail(String message, String? currentSsid) {
