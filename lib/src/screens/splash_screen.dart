@@ -11,9 +11,13 @@ import '../utils/wifi_config.dart';
 import '../utils/wifi_connect_helper.dart';
 import 'webview.dart';
 
+import 'package:flutter/services.dart';
+
 const Duration _wifiScanInterval = Duration(seconds: 8);
 const Duration _wifiScanResultDelay = Duration(seconds: 2);
 const Duration _wifiScanRetryDelay = Duration(seconds: 3);
+// 防止用户连续点击"立即重试"导致频繁重启流程，重试后短暂冷却。
+const Duration _manualRetryCooldown = Duration(seconds: 2);
 const Color _primaryActionColor = Color(0xFF1F7A55);
 const Color _secondaryActionColor = Colors.blueAccent;
 const Color _dangerActionColor = Color(0xFFC0392B);
@@ -35,6 +39,7 @@ class _SplashScreenState extends State<SplashScreen> {
   String? _wifiConnectionInfo;
   WiFiAccessPoint? _matchedWifiPoint;
   int _startupFlowId = 0;
+  bool _manualRetryOnCooldown = false;
 
   CanStartScan? _canStartScan;
 
@@ -42,6 +47,12 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _startStartupFlow();
+  }
+
+  @override
+  void dispose() {
+    debugPrint('===========SplashScreen dispose===========');
+    super.dispose();
   }
 
   Future<void> _loadCurrentUrl() async {
@@ -71,6 +82,29 @@ class _SplashScreenState extends State<SplashScreen> {
 
   bool _isActiveStartupFlow(int flowId) {
     return mounted && flowId == _startupFlowId;
+  }
+
+  /// 用户点击"立即重试"时调用。
+  ///
+  /// [_startStartupFlow] 会先自增 [_startupFlowId] 再启动新一轮流程，旧流程内部
+  /// 所有等待点（`Future.delayed` 之后）都会在下一次检查 [_isActiveStartupFlow]
+  /// 时因 flowId 不匹配而自动退出，因此这里不需要额外取消旧的 Future 或计时器，
+  /// 直接重启即可安全地"跳过"当前正在等待的 8s/3s 倒计时。
+  void _handleManualRetry() {
+    if (_manualRetryOnCooldown) return;
+
+    setState(() {
+      _manualRetryOnCooldown = true;
+      _startupMessage = StartupMessages.manualRetryTriggered;
+    });
+    _startStartupFlow();
+
+    Future.delayed(_manualRetryCooldown, () {
+      if (!mounted) return;
+      setState(() {
+        _manualRetryOnCooldown = false;
+      });
+    });
   }
 
   Future<void> _runStartupFlow(int flowId) async {
@@ -790,6 +824,24 @@ class _SplashScreenState extends State<SplashScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ],
+                  const SizedBox(height: 20),
+                  TextButton.icon(
+                    onPressed: _manualRetryOnCooldown ? null : _handleManualRetry,
+                    icon: const Icon(Icons.refresh, size: 26),
+                    label: Text(_manualRetryOnCooldown ? '重试中...' : '立即重试'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _secondaryActionColor,
+                      disabledForegroundColor: _mutedTextColor,
+                      textStyle: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   // if (_currentUrl.isNotEmpty)
                   //   Padding(
@@ -805,7 +857,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   //   ),
                   // const SizedBox(height: 48),
                   ElevatedButton(
-                    onPressed: () => exit(0),
+                    onPressed: () => SystemNavigator.pop(),
                     style: _controlButtonStyle(
                       color: _dangerActionColor,
                       minWidth: 160,

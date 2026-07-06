@@ -11,6 +11,8 @@ class StartupMessages {
   static const wifiConnectionLabel = 'WIFI连接状态';
   static const currentUrlLabel = '当前 URL';
 
+  static const manualRetryTriggered = '已手动触发重试，正在重新检测...';
+
   static const wifiFindScanning = '正在查找 Wi-Fi...';
   static const wifiFindSearching = 'Wi-Fi 查找中...';
   static const wifiFindSuccess = 'Wi-Fi 查找成功，正在连接...';

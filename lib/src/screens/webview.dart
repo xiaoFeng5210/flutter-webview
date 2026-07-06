@@ -58,7 +58,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                       child: const Text('取消 Cancel'),
                     ),
                     TextButton(
-                      onPressed: () => exit(0), // 退出应用
+                      onPressed: () => SystemNavigator.pop(), // 退出应用
                       child: const Text('确定 Confirm'),
                     ),
                   ],
