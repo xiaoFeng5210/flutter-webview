@@ -157,6 +157,64 @@ Future<WifiConnectionResult> connectToScannedAccessPoint(
   }
 }
 
+/// Connects to a previously known exact SSID without scanning first.
+Future<WifiConnectionResult> connectToKnownWifiSsid(
+  String ssid, {
+  WifiConnectionOptions options = const WifiConnectionOptions(),
+}) async {
+  final targetSsid = normalizeWifiSsid(ssid);
+  if (targetSsid == null || targetSsid.isEmpty) {
+    return const WifiConnectionResult(
+      success: false,
+      message: StartupMessages.wifiConnectEmptySsid,
+      targetSsid: '',
+    );
+  }
+
+  try {
+    final currentSsid = await getCurrentWifiSsid();
+    if (isSameWifiSsid(currentSsid, targetSsid)) {
+      return WifiConnectionResult(
+        success: true,
+        message: StartupMessages.wifiConnectAlreadyConnected,
+        targetSsid: targetSsid,
+        currentSsid: currentSsid,
+      );
+    }
+
+    final connected = options.hasPassword
+        ? await connectToSecureWifi(
+            targetSsid,
+            options.password,
+            isWep: options.isWep,
+            isWpa3: options.isWpa3,
+            saveNetwork: options.saveNetwork,
+            isHidden: options.isHidden,
+          )
+        : await connectToOpenWifi(targetSsid, saveNetwork: options.saveNetwork);
+    final latestSsid = await getCurrentWifiSsid();
+    final success = connected || isSameWifiSsid(latestSsid, targetSsid);
+
+    return WifiConnectionResult(
+      success: success,
+      message: success
+          ? StartupMessages.wifiConnectResultSuccess
+          : StartupMessages.wifiConnectResultFailed,
+      targetSsid: targetSsid,
+      currentSsid: latestSsid,
+    );
+  } catch (error, stackTrace) {
+    debugPrint('===========Error connecting known wifi: $error===========');
+    debugPrintStack(stackTrace: stackTrace);
+    return WifiConnectionResult(
+      success: false,
+      message: StartupMessages.wifiConnectException,
+      targetSsid: targetSsid,
+      error: error,
+    );
+  }
+}
+
 /// Connects to an open network by exact SSID.
 Future<bool> connectToOpenWifi(String ssid, {bool saveNetwork = false}) async {
   final connected = await PluginWifiConnect.connect(

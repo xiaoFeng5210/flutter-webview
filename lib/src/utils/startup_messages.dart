@@ -21,6 +21,7 @@ class StartupMessages {
   static const wifiFindUnsupported = '当前平台不支持 Wi-Fi 查找，继续检测 Web 服务...';
   static const wifiResultUnsupported = '当前平台不支持读取 Wi-Fi 结果，继续检测 Web 服务...';
 
+  static const wifiKnownConnecting = '正在连接上次成功的 Wi-Fi...';
   static const wifiConnectSuccess = 'Wi-Fi 连接成功，正在检测 Web 服务...';
   static const wifiConnectRetry = 'Wi-Fi 连接失败，稍后重试...';
   static const wifiConnectAlreadyConnected = '已连接目标 Wi-Fi';

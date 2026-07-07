@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class WifiConfig {
   static const String _ssidKey = 'target_wifi_ssid';
   static const String _passwordKey = 'target_wifi_password';
+  static const String _lastConnectedSsidKey = 'last_connected_wifi_ssid';
   static const String defaultSsid = 'robot-noodles';
   static const String defaultPassword = 'lebairobot';
 
@@ -37,7 +38,11 @@ class WifiConfig {
     if (value.isEmpty) return false;
 
     final prefs = await SharedPreferences.getInstance();
-    return prefs.setString(_ssidKey, value);
+    final ssidSaved = await prefs.setString(_ssidKey, value);
+    final lastSsidCleared =
+        !prefs.containsKey(_lastConnectedSsidKey) ||
+        await prefs.remove(_lastConnectedSsidKey);
+    return ssidSaved && lastSsidCleared;
   }
 
   static Future<bool> saveTargetPassword(String password) async {
@@ -59,7 +64,29 @@ class WifiConfig {
     final prefs = await SharedPreferences.getInstance();
     final ssidSaved = await prefs.setString(_ssidKey, ssidValue);
     final passwordSaved = await prefs.setString(_passwordKey, passwordValue);
-    return ssidSaved && passwordSaved;
+    final lastSsidCleared =
+        !prefs.containsKey(_lastConnectedSsidKey) ||
+        await prefs.remove(_lastConnectedSsidKey);
+    return ssidSaved && passwordSaved && lastSsidCleared;
+  }
+
+  static Future<String?> getLastConnectedSsid() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString(_lastConnectedSsidKey)?.trim();
+      if (value == null || value.isEmpty) return null;
+      return value;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<bool> saveLastConnectedSsid(String ssid) async {
+    final value = ssid.trim();
+    if (value.isEmpty) return false;
+
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.setString(_lastConnectedSsidKey, value);
   }
 
   static Future<bool> resetTargetWifi() async {
@@ -68,6 +95,9 @@ class WifiConfig {
         !prefs.containsKey(_ssidKey) || await prefs.remove(_ssidKey);
     final passwordRemoved =
         !prefs.containsKey(_passwordKey) || await prefs.remove(_passwordKey);
-    return ssidRemoved && passwordRemoved;
+    final lastSsidRemoved =
+        !prefs.containsKey(_lastConnectedSsidKey) ||
+        await prefs.remove(_lastConnectedSsidKey);
+    return ssidRemoved && passwordRemoved && lastSsidRemoved;
   }
 }

@@ -113,6 +113,13 @@ class _SplashScreenState extends State<SplashScreen> {
     final fastStarted = await _tryFastStartup(flowId);
     if (!_isActiveStartupFlow(flowId) || fastStarted) return;
 
+    final knownWifiConnected = await _tryKnownWifiConnection(flowId);
+    if (!_isActiveStartupFlow(flowId)) return;
+    if (knownWifiConnected) {
+      await _checkAppStatus(flowId);
+      return;
+    }
+
     final isWifiFound = await _waitForTargetWifi(flowId);
     if (!_isActiveStartupFlow(flowId) || !isWifiFound) return;
 
@@ -151,6 +158,7 @@ class _SplashScreenState extends State<SplashScreen> {
         });
       }
 
+      await WifiConfig.saveLastConnectedSsid(currentSsid!);
       await _checkAppStatus(flowId);
       return true;
     } catch (e) {
@@ -164,6 +172,38 @@ class _SplashScreenState extends State<SplashScreen> {
     final targetSsid = _targetWifiSsid.trim().toLowerCase();
     if (currentSsid == null || targetSsid.isEmpty) return false;
     return currentSsid.contains(targetSsid);
+  }
+
+  Future<bool> _tryKnownWifiConnection(int flowId) async {
+    final knownSsid = await WifiConfig.getLastConnectedSsid();
+    if (!_isActiveStartupFlow(flowId)) return false;
+    if (!_isTargetWifiSsid(knownSsid)) return false;
+
+    _setStartupMessage(StartupMessages.wifiKnownConnecting, flowId: flowId);
+
+    final result = await connectToKnownWifiSsid(
+      knownSsid!,
+      options: WifiConnectionOptions(
+        password: _targetWifiPassword,
+        saveNetwork: true,
+      ),
+    );
+
+    if (!_isActiveStartupFlow(flowId)) return false;
+    setState(() {
+      _wifiConnectionInfo = StartupMessages.wifiConnectionDetail(
+        result.message,
+        result.currentSsid,
+      );
+      _startupMessage = result.success
+          ? StartupMessages.wifiConnectSuccess
+          : StartupMessages.wifiConnectFailed(result.message);
+    });
+
+    if (result.success) {
+      await WifiConfig.saveLastConnectedSsid(result.targetSsid);
+    }
+    return result.success;
   }
 
   Future<bool> _waitForTargetWifi(int flowId) async {
@@ -300,6 +340,9 @@ class _SplashScreenState extends State<SplashScreen> {
           ? StartupMessages.wifiConnectSuccess
           : StartupMessages.wifiConnectFailed(result.message);
     });
+    if (result.success) {
+      await WifiConfig.saveLastConnectedSsid(result.targetSsid);
+    }
     return result.success;
   }
 
