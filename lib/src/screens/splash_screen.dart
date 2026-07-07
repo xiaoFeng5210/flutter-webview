@@ -364,7 +364,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _showTopErrorSnackBar(String message, {int durationSeconds = 4}) {
     if (!mounted) return;
-    final bottomMargin = MediaQuery.sizeOf(context).height - 132;
+    final screenSize = MediaQuery.sizeOf(context);
+    final desiredTop = screenSize.width < 680 ? 340.0 : 250.0;
+    const estimatedSnackBarHeight = 72.0;
+    final bottomMargin =
+        screenSize.height - desiredTop - estimatedSnackBarHeight;
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
