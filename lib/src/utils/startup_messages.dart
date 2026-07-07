@@ -30,6 +30,8 @@ class StartupMessages {
   static const wifiConnectMissingPassword = '目标 Wi-Fi 需要密码，请先配置密码';
   static const wifiConnectException = '目标 Wi-Fi 连接异常';
 
+  static const fastStartupChecking = '已连接目标 Wi-Fi，正在检测 Web 服务...';
+
   static const webChecking = '正在检测 Web 服务...';
   static const webUnavailable = 'Web 服务未连接上，稍后重试...';
 

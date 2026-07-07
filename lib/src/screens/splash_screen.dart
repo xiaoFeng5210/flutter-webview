@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:wifi_iot/wifi_iot.dart';
@@ -112,6 +110,9 @@ class _SplashScreenState extends State<SplashScreen> {
     await _loadCurrentUrl();
     if (!_isActiveStartupFlow(flowId)) return;
 
+    final fastStarted = await _tryFastStartup(flowId);
+    if (!_isActiveStartupFlow(flowId) || fastStarted) return;
+
     final isWifiFound = await _waitForTargetWifi(flowId);
     if (!_isActiveStartupFlow(flowId) || !isWifiFound) return;
 
@@ -121,6 +122,48 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     await _checkAppStatus(flowId);
+  }
+
+  Future<bool> _tryFastStartup(int flowId) async {
+    try {
+      final currentSsid = await getCurrentWifiSsid();
+      if (!_isActiveStartupFlow(flowId)) return false;
+
+      if (!_isTargetWifiSsid(currentSsid)) {
+        if (mounted) {
+          setState(() {
+            _wifiConnectionInfo = currentSsid == null
+                ? '未连接'
+                : '当前 Wi-Fi: $currentSsid';
+          });
+        }
+        return false;
+      }
+
+      if (mounted) {
+        setState(() {
+          _matchedWifiPoint = null;
+          _wifiConnectionInfo = StartupMessages.wifiConnectionDetail(
+            StartupMessages.wifiConnectAlreadyConnected,
+            currentSsid,
+          );
+          _startupMessage = StartupMessages.fastStartupChecking;
+        });
+      }
+
+      await _checkAppStatus(flowId);
+      return true;
+    } catch (e) {
+      debugPrint('===========Error checking current wifi: $e===========');
+      return false;
+    }
+  }
+
+  bool _isTargetWifiSsid(String? ssid) {
+    final currentSsid = normalizeWifiSsid(ssid)?.toLowerCase();
+    final targetSsid = _targetWifiSsid.trim().toLowerCase();
+    if (currentSsid == null || targetSsid.isEmpty) return false;
+    return currentSsid.contains(targetSsid);
   }
 
   Future<bool> _waitForTargetWifi(int flowId) async {
@@ -213,7 +256,6 @@ class _SplashScreenState extends State<SplashScreen> {
           flowId: flowId,
         );
         _showTopErrorSnackBar("请检查机器人是否开启", durationSeconds: 6);
-
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
         _setStartupMessage(StartupMessages.wifiFindFailed, flowId: flowId);
@@ -299,33 +341,42 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAppStatus(int flowId) async {
     if (!_isActiveStartupFlow(flowId)) return;
-    final navigator = Navigator.of(context);
-    try {
-      await _loadCurrentUrl();
-      if (!_isActiveStartupFlow(flowId)) return;
-      _setStartupMessage(StartupMessages.webChecking, flowId: flowId);
-      await Future.delayed(const Duration(seconds: 2));
-      if (!_isActiveStartupFlow(flowId)) return;
-      final res = await http
-          .get(Uri.parse(_currentUrl))
-          .timeout(const Duration(seconds: 8));
-      if (!_isActiveStartupFlow(flowId)) return;
-      if (res.statusCode == 200) {
-        if (_isActiveStartupFlow(flowId) && navigator.mounted) {
-          navigator.pushReplacement(
-            MaterialPageRoute(builder: (context) => const WebViewScreen()),
-          );
-        }
-        return;
-      }
-    } catch (e) {
-      debugPrint('===========Error checking app status: $e===========');
+    final webAvailable = await _checkWebServiceOnce(flowId);
+    if (!_isActiveStartupFlow(flowId)) return;
+    if (webAvailable) {
+      _openWebView();
+      return;
     }
     _setStartupMessage(StartupMessages.webUnavailable, flowId: flowId);
     await Future.delayed(const Duration(seconds: 3));
     if (_isActiveStartupFlow(flowId)) {
       await _checkAppStatus(flowId);
     }
+  }
+
+  Future<bool> _checkWebServiceOnce(int flowId) async {
+    try {
+      await _loadCurrentUrl();
+      if (!_isActiveStartupFlow(flowId)) return false;
+      _setStartupMessage(StartupMessages.webChecking, flowId: flowId);
+      await Future.delayed(const Duration(seconds: 2));
+      if (!_isActiveStartupFlow(flowId)) return false;
+      final res = await http
+          .get(Uri.parse(_currentUrl))
+          .timeout(const Duration(seconds: 8));
+      if (!_isActiveStartupFlow(flowId)) return false;
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('===========Error checking app status: $e===========');
+      return false;
+    }
+  }
+
+  void _openWebView() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const WebViewScreen()),
+    );
   }
 
   Future<void> _showWifiSettingsDialog() async {
@@ -826,7 +877,9 @@ class _SplashScreenState extends State<SplashScreen> {
                   ],
                   const SizedBox(height: 20),
                   TextButton.icon(
-                    onPressed: _manualRetryOnCooldown ? null : _handleManualRetry,
+                    onPressed: _manualRetryOnCooldown
+                        ? null
+                        : _handleManualRetry,
                     icon: const Icon(Icons.refresh, size: 26),
                     label: Text(_manualRetryOnCooldown ? '重试中...' : '立即重试'),
                     style: TextButton.styleFrom(
