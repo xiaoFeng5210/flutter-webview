@@ -13,8 +13,8 @@ import 'webview.dart';
 
 import 'package:flutter/services.dart';
 
-const Duration _wifiScanInterval = Duration(seconds: 8);
-const Duration _wifiScanResultDelay = Duration(seconds: 2);
+const Duration _wifiScanInterval = Duration(seconds: 5);
+const Duration _wifiScanResultDelay = Duration(seconds: 1);
 const Duration _wifiScanRetryDelay = Duration(seconds: 3);
 // 防止用户连续点击"立即重试"导致频繁重启流程，重试后短暂冷却。
 const Duration _manualRetryCooldown = Duration(seconds: 2);
