@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 
 const Duration _wifiScanInterval = Duration(seconds: 5);
 const Duration _wifiScanResultDelay = Duration(seconds: 1);
-const Duration _wifiScanRetryDelay = Duration(seconds: 3);
+const Duration _wifiActiveScanCooldown = Duration(seconds: 12);
 // 防止用户连续点击"立即重试"导致频繁重启流程，重试后短暂冷却。
 const Duration _manualRetryCooldown = Duration(seconds: 2);
 const Color _primaryActionColor = Color(0xFF1F7A55);
@@ -38,6 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
   WiFiAccessPoint? _matchedWifiPoint;
   int _startupFlowId = 0;
   bool _manualRetryOnCooldown = false;
+  DateTime? _lastWifiScanAttemptedAt;
 
   CanStartScan? _canStartScan;
 
@@ -75,6 +76,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _startStartupFlow() {
     final flowId = ++_startupFlowId;
+    _lastWifiScanAttemptedAt = null;
     _runStartupFlow(flowId);
   }
 
@@ -224,6 +226,23 @@ class _SplashScreenState extends State<SplashScreen> {
           continue;
         }
 
+        final currentSsid = await getCurrentWifiSsid();
+        if (!_isActiveStartupFlow(flowId)) return false;
+        if (_isTargetWifiSsid(currentSsid)) {
+          if (mounted) {
+            setState(() {
+              _matchedWifiPoint = null;
+              _wifiConnectionInfo = StartupMessages.wifiConnectionDetail(
+                StartupMessages.wifiConnectAlreadyConnected,
+                currentSsid,
+              );
+              _startupMessage = StartupMessages.wifiConnectSuccess;
+            });
+          }
+          await WifiConfig.saveLastConnectedSsid(currentSsid!);
+          return true;
+        }
+
         _setStartupMessage(StartupMessages.wifiFindScanning, flowId: flowId);
 
         _canStartScan = await WiFiScan.instance.canStartScan(
@@ -246,15 +265,31 @@ class _SplashScreenState extends State<SplashScreen> {
           continue;
         }
 
-        final scanStarted = await WiFiScan.instance.startScan();
+        final now = DateTime.now();
+        final canTryActiveScan =
+            _lastWifiScanAttemptedAt == null ||
+            now.difference(_lastWifiScanAttemptedAt!) >=
+                _wifiActiveScanCooldown;
+        var scanStarted = false;
+        if (canTryActiveScan) {
+          _lastWifiScanAttemptedAt = now;
+          scanStarted = await WiFiScan.instance.startScan();
+          if (!scanStarted) {
+            debugPrint(
+              '===========Wi-Fi scan not started; reading cached results===========',
+            );
+          }
+        } else {
+          debugPrint(
+            '===========Wi-Fi active scan cooldown; reading cached results===========',
+          );
+        }
         if (_isActiveStartupFlow(flowId)) {
           _setStartupMessage(StartupMessages.wifiFindSearching, flowId: flowId);
-          if (!scanStarted) {
-            await Future.delayed(_wifiScanRetryDelay);
-            continue;
-          }
         }
-        await Future.delayed(_wifiScanResultDelay);
+        if (scanStarted) {
+          await Future.delayed(_wifiScanResultDelay);
+        }
         if (!_isActiveStartupFlow(flowId)) return false;
 
         final canGetResults = await WiFiScan.instance.canGetScannedResults(
