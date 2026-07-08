@@ -23,10 +23,10 @@ class StartupMessages {
 
   static const wifiKnownConnecting = '正在连接上次成功的 Wi-Fi...';
   static const wifiConnectSuccess = 'Wi-Fi 连接成功，正在检测 Web 服务...';
-  static const wifiConnectRetry = 'Wi-Fi 连接失败，稍后重试...';
+  static const wifiConnectRetry = 'Wi-Fi 连接失败，重连中...';
   static const wifiConnectAlreadyConnected = '已连接目标 Wi-Fi';
   static const wifiConnectResultSuccess = '目标 Wi-Fi 连接成功';
-  static const wifiConnectResultFailed = '目标 Wi-Fi 连接失败, 重连中...';
+  static const wifiConnectResultFailed = '目标 Wi-Fi 连接失败';
   static const wifiConnectEmptySsid = '目标 Wi-Fi SSID 为空，无法连接';
   static const wifiConnectMissingPassword = '目标 Wi-Fi 需要密码，请先配置密码';
   static const wifiConnectException = '目标 Wi-Fi 连接出现了点小差错～';
@@ -34,8 +34,10 @@ class StartupMessages {
 
   static const fastStartupChecking = '已连接目标 Wi-Fi，正在检测 Web 服务...';
 
+  static const waitingForRobotRouter = '等待机器人路由器开启...';
+
   static const webChecking = '正在检测 Web 服务...';
-  static const webUnavailable = 'Web 服务未连接上，稍后重试...';
+  static const webUnavailable = 'Web 服务未连接上，重连中...';
 
   static String scanCount(int count) => '$count 个 Wi-Fi';
 
@@ -47,7 +49,7 @@ class StartupMessages {
     return currentSsid == null ? '暂无' : '$message ($currentSsid)';
   }
 
-  static String wifiConnectFailed(String message) => '$message，稍后重试...';
+  static String wifiConnectFailed(String message) => '$message, 重连中...';
 
   static String scanBlock(CanStartScan result) {
     switch (result) {

@@ -216,8 +216,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (result.success) {
       await WifiConfig.saveLastConnectedSsid(result.targetSsid);
+      return true;
     }
-    return result.success;
+
+    _showRobotRouterWaitingSnackBar();
+    return false;
   }
 
   Future<bool> _waitForTargetWifi(int flowId) async {
@@ -353,7 +356,7 @@ class _SplashScreenState extends State<SplashScreen> {
           StartupMessages.wifiNotFound(accessPoints.length, _targetWifiSsid),
           flowId: flowId,
         );
-        _showTopErrorSnackBar("等待路由器开启中...", durationSeconds: 6);
+        _showRobotRouterWaitingSnackBar();
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
         _setStartupMessage(StartupMessages.wifiFindFailed, flowId: flowId);
@@ -445,8 +448,11 @@ class _SplashScreenState extends State<SplashScreen> {
     });
     if (result.success) {
       await WifiConfig.saveLastConnectedSsid(result.targetSsid);
+      return true;
     }
-    return result.success;
+
+    _showRobotRouterWaitingSnackBar();
+    return false;
   }
 
   Future<bool> _waitForWifiConnection(int flowId) async {
@@ -465,6 +471,13 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
+  void _showRobotRouterWaitingSnackBar() {
+    _showTopErrorSnackBar(
+      StartupMessages.waitingForRobotRouter,
+      durationSeconds: 6,
+    );
+  }
+
   void _showTopErrorSnackBar(String message, {int durationSeconds = 4}) {
     if (!mounted) return;
     final screenSize = MediaQuery.sizeOf(context);
@@ -477,7 +490,7 @@ class _SplashScreenState extends State<SplashScreen> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontSize: 32)),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(
           left: 48,
