@@ -17,6 +17,7 @@ const Duration _wifiActiveScanCooldown = Duration(seconds: 30);
 const Duration _wifiScanResultPollTimeout = Duration(seconds: 8);
 const Duration _wifiScanResultPollInterval = Duration(seconds: 1);
 const Duration _knownWifiConnectionTimeout = Duration(seconds: 3);
+const Duration _matchedWifiConnectionTimeout = Duration(seconds: 10);
 // 防止用户连续点击"立即重试"导致频繁重启流程，重试后短暂冷却。
 const Duration _manualRetryCooldown = Duration(seconds: 2);
 const Color _primaryActionColor = Color(0xFF1F7A55);
@@ -285,7 +286,6 @@ class _SplashScreenState extends State<SplashScreen> {
         if (canTryActiveScan) {
           _lastWifiScanAttemptedAt = now;
           scanStarted = await WiFiScan.instance.startScan();
-          debugPrint('===========scanStarted: $scanStarted===========');
           if (!scanStarted) {
             debugPrint(
               '===========Wi-Fi scan not started; reading cached results===========',
@@ -417,13 +417,21 @@ class _SplashScreenState extends State<SplashScreen> {
     final accessPoint = _matchedWifiPoint;
     if (accessPoint == null) return false;
 
-    final result = await connectToScannedAccessPoint(
-      accessPoint,
-      options: WifiConnectionOptions(
-        password: _targetWifiPassword,
-        saveNetwork: true,
-      ),
-    );
+    final result =
+        await connectToScannedAccessPoint(
+          accessPoint,
+          options: WifiConnectionOptions(
+            password: _targetWifiPassword,
+            saveNetwork: true,
+          ),
+        ).timeout(
+          _matchedWifiConnectionTimeout,
+          onTimeout: () => WifiConnectionResult(
+            success: false,
+            message: StartupMessages.wifiConnectTimeout,
+            targetSsid: accessPoint.ssid,
+          ),
+        );
 
     if (!_isActiveStartupFlow(flowId)) return false;
     setState(() {
@@ -698,6 +706,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _resetWifiConfig() async {
+    final confirmed = await _showResetConfirmDialog(
+      title: '重置 Wi-Fi 配置',
+      message: '确认恢复默认 Wi-Fi 配置吗？当前保存的 Wi-Fi 名称、密码和连接缓存都会被清除。',
+    );
+    if (!confirmed) return;
+
     final success = await WifiConfig.resetTargetWifi();
     if (!mounted) return;
 
@@ -825,6 +839,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _resetUrl() async {
+    final confirmed = await _showResetConfirmDialog(
+      title: '重置 Web URL',
+      message: '确认将 Web URL 恢复为默认地址吗？',
+    );
+    if (!confirmed) return;
+
     const defaultUrl = 'http://192.168.22.103:8092';
     final success = await UrlConfig.saveUrl(defaultUrl);
     if (mounted) {
@@ -842,6 +862,69 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       );
     }
+  }
+
+  Future<bool> _showResetConfirmDialog({
+    required String title,
+    required String message,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            width: MediaQuery.of(context).size.width * 0.72,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    color: Color(0xFF344054),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('取消', style: TextStyle(fontSize: 24)),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _dangerActionColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                      ),
+                      child: const Text('确认重置', style: TextStyle(fontSize: 24)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return confirmed ?? false;
   }
 
   ButtonStyle _controlButtonStyle({

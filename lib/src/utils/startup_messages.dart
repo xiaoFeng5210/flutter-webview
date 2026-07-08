@@ -26,10 +26,10 @@ class StartupMessages {
   static const wifiConnectRetry = 'Wi-Fi 连接失败，稍后重试...';
   static const wifiConnectAlreadyConnected = '已连接目标 Wi-Fi';
   static const wifiConnectResultSuccess = '目标 Wi-Fi 连接成功';
-  static const wifiConnectResultFailed = '目标 Wi-Fi 连接失败';
+  static const wifiConnectResultFailed = '目标 Wi-Fi 连接失败, 重连中...';
   static const wifiConnectEmptySsid = '目标 Wi-Fi SSID 为空，无法连接';
   static const wifiConnectMissingPassword = '目标 Wi-Fi 需要密码，请先配置密码';
-  static const wifiConnectException = '目标 Wi-Fi 连接异常';
+  static const wifiConnectException = '目标 Wi-Fi 连接出现了点小差错～';
   static const wifiConnectTimeout = '连接上次 Wi-Fi 超时';
 
   static const fastStartupChecking = '已连接目标 Wi-Fi，正在检测 Web 服务...';
