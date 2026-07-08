@@ -30,6 +30,7 @@ class StartupMessages {
   static const wifiConnectEmptySsid = '目标 Wi-Fi SSID 为空，无法连接';
   static const wifiConnectMissingPassword = '目标 Wi-Fi 需要密码，请先配置密码';
   static const wifiConnectException = '目标 Wi-Fi 连接异常';
+  static const wifiConnectTimeout = '连接上次 Wi-Fi 超时';
 
   static const fastStartupChecking = '已连接目标 Wi-Fi，正在检测 Web 服务...';
 

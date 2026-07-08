@@ -13,7 +13,10 @@ import 'package:flutter/services.dart';
 
 const Duration _wifiScanInterval = Duration(seconds: 5);
 const Duration _wifiScanResultDelay = Duration(seconds: 1);
-const Duration _wifiActiveScanCooldown = Duration(seconds: 12);
+const Duration _wifiActiveScanCooldown = Duration(seconds: 30);
+const Duration _wifiScanResultPollTimeout = Duration(seconds: 8);
+const Duration _wifiScanResultPollInterval = Duration(seconds: 1);
+const Duration _knownWifiConnectionTimeout = Duration(seconds: 3);
 // 防止用户连续点击"立即重试"导致频繁重启流程，重试后短暂冷却。
 const Duration _manualRetryCooldown = Duration(seconds: 2);
 const Color _primaryActionColor = Color(0xFF1F7A55);
@@ -183,13 +186,21 @@ class _SplashScreenState extends State<SplashScreen> {
 
     _setStartupMessage(StartupMessages.wifiKnownConnecting, flowId: flowId);
 
-    final result = await connectToKnownWifiSsid(
-      knownSsid!,
-      options: WifiConnectionOptions(
-        password: _targetWifiPassword,
-        saveNetwork: true,
-      ),
-    );
+    final result =
+        await connectToKnownWifiSsid(
+          knownSsid!,
+          options: WifiConnectionOptions(
+            password: _targetWifiPassword,
+            saveNetwork: true,
+          ),
+        ).timeout(
+          _knownWifiConnectionTimeout,
+          onTimeout: () => WifiConnectionResult(
+            success: false,
+            message: StartupMessages.wifiConnectTimeout,
+            targetSsid: knownSsid,
+          ),
+        );
 
     if (!_isActiveStartupFlow(flowId)) return false;
     setState(() {
@@ -274,6 +285,7 @@ class _SplashScreenState extends State<SplashScreen> {
         if (canTryActiveScan) {
           _lastWifiScanAttemptedAt = now;
           scanStarted = await WiFiScan.instance.startScan();
+          debugPrint('===========scanStarted: $scanStarted===========');
           if (!scanStarted) {
             debugPrint(
               '===========Wi-Fi scan not started; reading cached results===========',
@@ -288,6 +300,17 @@ class _SplashScreenState extends State<SplashScreen> {
           _setStartupMessage(StartupMessages.wifiFindSearching, flowId: flowId);
         }
         if (scanStarted) {
+          final matchedAccessPoint = await _pollForTargetAccessPoint(
+            flowId,
+            timeout: _wifiScanResultPollTimeout,
+            interval: _wifiScanResultPollInterval,
+          );
+          if (!_isActiveStartupFlow(flowId)) return false;
+          if (matchedAccessPoint != null) {
+            _matchedWifiPoint = matchedAccessPoint;
+            return true;
+          }
+        } else {
           await Future.delayed(_wifiScanResultDelay);
         }
         if (!_isActiveStartupFlow(flowId)) return false;
@@ -330,7 +353,7 @@ class _SplashScreenState extends State<SplashScreen> {
           StartupMessages.wifiNotFound(accessPoints.length, _targetWifiSsid),
           flowId: flowId,
         );
-        _showTopErrorSnackBar("请检查机器人是否开启", durationSeconds: 6);
+        _showTopErrorSnackBar("等待路由器开启中...", durationSeconds: 6);
       } catch (e) {
         debugPrint('===========Error scanning wifi: $e===========');
         _setStartupMessage(StartupMessages.wifiFindFailed, flowId: flowId);
@@ -339,6 +362,43 @@ class _SplashScreenState extends State<SplashScreen> {
       await Future.delayed(_wifiScanInterval);
     }
     return false;
+  }
+
+  Future<WiFiAccessPoint?> _pollForTargetAccessPoint(
+    int flowId, {
+    required Duration timeout,
+    required Duration interval,
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+
+    while (_isActiveStartupFlow(flowId) && DateTime.now().isBefore(deadline)) {
+      final accessPoints = await _getScannedResultsIfAllowed(flowId);
+      if (!_isActiveStartupFlow(flowId)) return null;
+      if (accessPoints != null) {
+        final matchedAccessPoint = _findTargetAccessPoint(accessPoints);
+        if (matchedAccessPoint != null) {
+          if (_isActiveStartupFlow(flowId)) {
+            setState(() {
+              _startupMessage = StartupMessages.wifiFindSuccess;
+            });
+          }
+          return matchedAccessPoint;
+        }
+      }
+
+      await Future.delayed(interval);
+    }
+
+    return null;
+  }
+
+  Future<List<WiFiAccessPoint>?> _getScannedResultsIfAllowed(int flowId) async {
+    final canGetResults = await WiFiScan.instance.canGetScannedResults(
+      askPermissions: true,
+    );
+    if (!_isActiveStartupFlow(flowId)) return null;
+    if (canGetResults != CanGetScannedResults.yes) return null;
+    return WiFiScan.instance.getScannedResults();
   }
 
   WiFiAccessPoint? _findTargetAccessPoint(List<WiFiAccessPoint> accessPoints) {
