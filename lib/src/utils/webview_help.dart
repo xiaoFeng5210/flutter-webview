@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 InAppWebViewSettings getWebViewSettings() {
@@ -42,6 +43,6 @@ Future<void> getBrowserInfo({
       source: 'navigator.userAgent',
     );
     final chromeVersion = _getChromeVersion(userAgent);
-    print('chromeVersion: $chromeVersion');
+    debugPrint('chromeVersion: $chromeVersion');
   }
 }

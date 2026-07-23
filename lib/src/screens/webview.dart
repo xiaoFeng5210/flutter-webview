@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:async';
-import 'dart:io';
 
 // import 'package:flutter_webview/src/utils/env.dart';
 import 'package:flutter_webview/src/utils/webview_help.dart';
@@ -75,10 +74,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
           );
         },
         onLoadStart: (controller, url) {
-          print('开始加载: $url');
+          debugPrint('开始加载: $url');
         },
         onLoadStop: (controller, url) async {
-          print('加载完成: $url');
+          debugPrint('加载完成: $url');
           await getBrowserInfo(controller: controller);
         },
       ),

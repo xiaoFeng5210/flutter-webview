@@ -1,30 +1,59 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flutter_webview/main.dart';
+import 'package:flutter_webview/src/utils/wifi_connect_helper.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('normalizes Android SSID values', () {
+    expect(normalizeWifiSsid('"Robot-WiFi"'), 'Robot-WiFi');
+    expect(normalizeWifiSsid(' Robot-WiFi '), 'Robot-WiFi');
+    expect(normalizeWifiSsid('<unknown ssid>'), isNull);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('compares normalized SSIDs', () {
+    expect(isSameWifiSsid('"Robot-WiFi"', 'Robot-WiFi'), isTrue);
+    expect(isSameWifiSsid('Robot-WiFi', 'Other-WiFi'), isFalse);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('repairs the Android route using the normalized current SSID', () async {
+    const channel = MethodChannel('com.example.flutter_webview/network_route');
+    MethodCall? receivedCall;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          receivedCall = call;
+          return true;
+        });
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    expect(await repairCurrentWifiRoute('"Robot-WiFi"'), isTrue);
+    expect(receivedCall?.method, 'repairWifiRoute');
+    expect(receivedCall?.arguments, {'ssid': 'Robot-WiFi'});
+  });
+
+  test('cancels a pending native Wi-Fi request on Android', () async {
+    const channel = MethodChannel('plugin_wifi_connect');
+    MethodCall? receivedCall;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          receivedCall = call;
+          return true;
+        });
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    await cancelPendingPluginWifiConnection();
+    expect(receivedCall?.method, 'disconnect');
   });
 }

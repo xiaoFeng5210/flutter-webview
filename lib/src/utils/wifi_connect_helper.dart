@@ -6,6 +6,11 @@ import 'package:wifi_scan/wifi_scan.dart';
 import 'startup_messages.dart';
 import 'wifi_config.dart';
 
+const MethodChannel _networkRouteChannel = MethodChannel(
+  'com.example.flutter_webview/network_route',
+);
+const Duration _networkCleanupTimeout = Duration(seconds: 2);
+
 /// 目标 Wi-Fi 密码统一配置。
 ///
 /// 如果 PAD 设备 Wi-Fi 是开放网络，保持空字符串即可；如果有密码，直接填在这里，
@@ -87,6 +92,52 @@ Future<String?> getCurrentWifiSsid() async {
 Future<bool> disconnectFromPluginWifi() async {
   final disconnected = await PluginWifiConnect.disconnect();
   return disconnected ?? false;
+}
+
+/// Cancels an Android 10+ network request left behind by a timed-out connect.
+///
+/// A Dart [Future.timeout] does not cancel plugin_wifi_connect's native
+/// ConnectivityManager callback. Without this cleanup, that callback can later
+/// bind the whole app process back to an obsolete Wi-Fi Network.
+Future<void> cancelPendingPluginWifiConnection() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
+  try {
+    await disconnectFromPluginWifi().timeout(_networkCleanupTimeout);
+  } catch (error, stackTrace) {
+    debugPrint(
+      '===========Error cleaning stale wifi request: $error===========',
+    );
+    debugPrintStack(stackTrace: stackTrace);
+  }
+}
+
+/// Ensures app traffic uses the Wi-Fi Network represented by [currentSsid].
+///
+/// Android can keep a stale process-wide network binding after Wi-Fi switches.
+/// The app-owned native channel selects the current Wi-Fi Network again. Failure
+/// is best-effort: callers should still perform their normal availability check.
+Future<bool> repairCurrentWifiRoute(String? currentSsid) async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
+
+  final normalizedSsid = normalizeWifiSsid(currentSsid);
+  if (normalizedSsid == null) return false;
+
+  try {
+    return await _networkRouteChannel.invokeMethod<bool>('repairWifiRoute', {
+          'ssid': normalizedSsid,
+        }) ??
+        false;
+  } on MissingPluginException catch (error) {
+    debugPrint(
+      '===========Network route repair unavailable: $error===========',
+    );
+    return false;
+  } on PlatformException catch (error, stackTrace) {
+    debugPrint('===========Error repairing wifi route: $error===========');
+    debugPrintStack(stackTrace: stackTrace);
+    return false;
+  }
 }
 
 /// Connects to a scanned Wi-Fi access point.

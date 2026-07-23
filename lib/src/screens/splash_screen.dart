@@ -196,11 +196,16 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ).timeout(
           _knownWifiConnectionTimeout,
-          onTimeout: () => WifiConnectionResult(
-            success: false,
-            message: StartupMessages.wifiConnectTimeout,
-            targetSsid: knownSsid,
-          ),
+          onTimeout: () async {
+            if (_isActiveStartupFlow(flowId)) {
+              await cancelPendingPluginWifiConnection();
+            }
+            return WifiConnectionResult(
+              success: false,
+              message: StartupMessages.wifiConnectTimeout,
+              targetSsid: knownSsid,
+            );
+          },
         );
 
     if (!_isActiveStartupFlow(flowId)) return false;
@@ -429,11 +434,16 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ).timeout(
           _matchedWifiConnectionTimeout,
-          onTimeout: () => WifiConnectionResult(
-            success: false,
-            message: StartupMessages.wifiConnectTimeout,
-            targetSsid: accessPoint.ssid,
-          ),
+          onTimeout: () async {
+            if (_isActiveStartupFlow(flowId)) {
+              await cancelPendingPluginWifiConnection();
+            }
+            return WifiConnectionResult(
+              success: false,
+              message: StartupMessages.wifiConnectTimeout,
+              targetSsid: accessPoint.ssid,
+            );
+          },
         );
 
     if (!_isActiveStartupFlow(flowId)) return false;
@@ -523,6 +533,15 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!_isActiveStartupFlow(flowId)) return false;
       _setStartupMessage(StartupMessages.webChecking, flowId: flowId);
       await Future.delayed(const Duration(seconds: 2));
+      if (!_isActiveStartupFlow(flowId)) return false;
+      final currentSsid = await getCurrentWifiSsid();
+      if (!_isActiveStartupFlow(flowId)) return false;
+      if (_isTargetWifiSsid(currentSsid)) {
+        final routeRepaired = await repairCurrentWifiRoute(currentSsid);
+        debugPrint(
+          '===========Wi-Fi route repair: $routeRepaired, SSID: $currentSsid===========',
+        );
+      }
       if (!_isActiveStartupFlow(flowId)) return false;
       final res = await http
           .get(Uri.parse(_currentUrl))

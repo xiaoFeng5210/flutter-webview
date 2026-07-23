@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
-import 'package:network_info/network_info.dart';
 
 /// The Widget that configures your application.
 class MyApp extends StatelessWidget {
@@ -28,26 +27,6 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.system,
 
       home: const Stack(children: [SplashScreen()]),
-    );
-  }
-
-  void _showExitDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('退出确认'),
-        content: const Text('是否要退出应用？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => SystemNavigator.pop(),
-            child: const Text('退出'),
-          ),
-        ],
-      ),
     );
   }
 }
