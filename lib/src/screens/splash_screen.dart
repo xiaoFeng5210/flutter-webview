@@ -16,8 +16,6 @@ const Duration _wifiScanResultDelay = Duration(seconds: 1);
 const Duration _wifiActiveScanCooldown = Duration(seconds: 30);
 const Duration _wifiScanResultPollTimeout = Duration(seconds: 8);
 const Duration _wifiScanResultPollInterval = Duration(seconds: 1);
-const Duration _knownWifiConnectionTimeout = Duration(seconds: 3);
-const Duration _matchedWifiConnectionTimeout = Duration(seconds: 10);
 // 防止用户连续点击"立即重试"导致频繁重启流程，重试后短暂冷却。
 const Duration _manualRetryCooldown = Duration(seconds: 2);
 const Color _primaryActionColor = Color(0xFF1F7A55);
@@ -90,17 +88,21 @@ class _SplashScreenState extends State<SplashScreen> {
 
   /// 用户点击"立即重试"时调用。
   ///
-  /// [_startStartupFlow] 会先自增 [_startupFlowId] 再启动新一轮流程，旧流程内部
-  /// 所有等待点（`Future.delayed` 之后）都会在下一次检查 [_isActiveStartupFlow]
-  /// 时因 flowId 不匹配而自动退出，因此这里不需要额外取消旧的 Future 或计时器，
-  /// 直接重启即可安全地"跳过"当前正在等待的 8s/3s 倒计时。
-  void _handleManualRetry() {
+  /// 先让旧流程失效并取消可能仍在等待系统选择的原生请求，再启动新流程。
+  ///
+  /// 正常连接不设置应用层超时，只等待 Android 返回连接成功或不可用；这里是
+  /// 系统没有返回结果时由用户主动触发的兜底。
+  Future<void> _handleManualRetry() async {
     if (_manualRetryOnCooldown) return;
 
     setState(() {
       _manualRetryOnCooldown = true;
       _startupMessage = StartupMessages.manualRetryTriggered;
     });
+
+    final retryFlowId = ++_startupFlowId;
+    await cancelPendingPluginWifiConnection();
+    if (!_isActiveStartupFlow(retryFlowId)) return;
     _startStartupFlow();
 
     Future.delayed(_manualRetryCooldown, () {
@@ -187,26 +189,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
     _setStartupMessage(StartupMessages.wifiKnownConnecting, flowId: flowId);
 
-    final result =
-        await connectToKnownWifiSsid(
-          knownSsid!,
-          options: WifiConnectionOptions(
-            password: _targetWifiPassword,
-            saveNetwork: true,
-          ),
-        ).timeout(
-          _knownWifiConnectionTimeout,
-          onTimeout: () async {
-            if (_isActiveStartupFlow(flowId)) {
-              await cancelPendingPluginWifiConnection();
-            }
-            return WifiConnectionResult(
-              success: false,
-              message: StartupMessages.wifiConnectTimeout,
-              targetSsid: knownSsid,
-            );
-          },
-        );
+    final result = await connectToKnownWifiSsid(
+      knownSsid!,
+      options: WifiConnectionOptions(
+        password: _targetWifiPassword,
+        saveNetwork: true,
+      ),
+    );
 
     if (!_isActiveStartupFlow(flowId)) return false;
     setState(() {
@@ -425,26 +414,13 @@ class _SplashScreenState extends State<SplashScreen> {
     final accessPoint = _matchedWifiPoint;
     if (accessPoint == null) return false;
 
-    final result =
-        await connectToScannedAccessPoint(
-          accessPoint,
-          options: WifiConnectionOptions(
-            password: _targetWifiPassword,
-            saveNetwork: true,
-          ),
-        ).timeout(
-          _matchedWifiConnectionTimeout,
-          onTimeout: () async {
-            if (_isActiveStartupFlow(flowId)) {
-              await cancelPendingPluginWifiConnection();
-            }
-            return WifiConnectionResult(
-              success: false,
-              message: StartupMessages.wifiConnectTimeout,
-              targetSsid: accessPoint.ssid,
-            );
-          },
-        );
+    final result = await connectToScannedAccessPoint(
+      accessPoint,
+      options: WifiConnectionOptions(
+        password: _targetWifiPassword,
+        saveNetwork: true,
+      ),
+    );
 
     if (!_isActiveStartupFlow(flowId)) return false;
     setState(() {

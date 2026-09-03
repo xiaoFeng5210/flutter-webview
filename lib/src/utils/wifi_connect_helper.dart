@@ -94,11 +94,12 @@ Future<bool> disconnectFromPluginWifi() async {
   return disconnected ?? false;
 }
 
-/// Cancels an Android 10+ network request left behind by a timed-out connect.
+/// Cancels an Android 10+ network request when the user explicitly retries.
 ///
-/// A Dart [Future.timeout] does not cancel plugin_wifi_connect's native
-/// ConnectivityManager callback. Without this cleanup, that callback can later
-/// bind the whole app process back to an obsolete Wi-Fi Network.
+/// Normal connections wait for Android's available/unavailable callback without
+/// an app-level timeout. A manual retry still needs to release the previous
+/// callback before starting another request, otherwise it could later bind the
+/// app process back to an obsolete Wi-Fi Network.
 Future<void> cancelPendingPluginWifiConnection() async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
 
